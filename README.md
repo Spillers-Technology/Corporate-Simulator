@@ -14,9 +14,13 @@ runs exactly this process by hand, for real business decisions, in a private rep
 that — with a future hand-redacted demo dataset planned so you can watch a real session play out
 without any private data ever touching this repo. See **[Clean separation](#clean-separation)** below.
 
-**Status:** replay-only MVP. The backend reads completed meeting files and streams
-recorded text to a 2D Canvas office. Live generation, model configuration, human-input
-forms, and CLI sign-in are planned, not implemented. The synthetic local test recording
+**Status:** replay, plus the two human-authored phases of a new meeting. The backend
+reads completed meeting files and streams recorded text to a 2D Canvas office; a "New
+meeting" mode writes and commits Phase 0 (the motion) and Phase 1 (the founder draft)
+into the mounted data directory, staged behind an explicit **Seal & Commit** and sealed
+against re-editing afterwards. Live seat generation (Phase 2 onward), model
+configuration, and CLI sign-in are planned, not implemented — a meeting sealed here
+stops at Phase 1 and the UI says so. The synthetic local test recording
 lives in `backend/test-fixtures/synthetic-demo/`; `demo-data/` remains reserved for
 Joey's future approved redaction. Static GitHub Pages alone cannot run the replay API.
 
@@ -73,8 +77,12 @@ DATA_DIR=./backend/test-fixtures docker compose up --build
 Open http://localhost:3000 and click **Play recording**. Plain `docker compose up`
 uses the untouched `demo-data/` directory and correctly shows no complete recordings.
 For your own local data, set `DATA_DIR` to an absolute path to a meeting, collection,
-or board directory with `meetings/` and optional `seats/`. The mount is read-only.
-Existing CLI credential volumes in Compose are unused by replay mode.
+or board directory with `meetings/` and optional `seats/`. The mount is read-write as
+of the Phase 0/1 human-input forms: replay never writes, but sealing a motion or
+founder draft creates a `<date>-<slug>/` directory there and runs a real `git add` +
+`git commit` in the repository containing it. Point it at your own process knowing
+that. Existing CLI credential volumes in Compose are still unused — nothing here
+dispatches a model yet.
 
 Without Docker, use Node.js 22+ and two terminals from the repo root:
 
