@@ -276,6 +276,13 @@ spinner. Concretely:
 
 ## 6b. Persona avatars — South Park-style cutout animation
 
+**Art direction, stated plainly so it isn't lost before the art pass actually happens
+(2026-09-19):** Habbo Hotel-style bodies — chunky, blocky, charmingly low-fidelity
+isometric-ish figures — topped with the South Park-style cutout head (see below). Not
+a from-scratch character design; the body language is "classic Habbo avatar," the head
+technique is "flat image swapped onto a simple rig." Revisit this note when the actual
+character-art pass starts.
+
 **The animation technique itself:** yes, do this — a static head/face image composited
 onto a simple 2D-animated cutout body (limbs as separate flat pieces that rotate/tween
 around joints, à la South Park's construction-paper style) is cheap to build, easy to
