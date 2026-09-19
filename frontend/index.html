@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meeting replay</title>
+  <link rel="stylesheet" href="./src/style.css">
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">THE OFFICE IS IN SESSION</p><h1 id="brand">Meeting replay</h1></div>
+      <span class="badge">REPLAY ONLY</span>
+    </header>
+    <p class="intro">One room. Six opinions. An ambitious amount of alignment. Watch a saved meeting unfold.</p>
+    <form id="controls">
+      <label>Recording <select id="meeting" disabled><option>Loading recordings…</option></select></label>
+      <label>Reading pace <select id="speed"><option value="0.5">0.5× · leisurely</option><option value="1" selected>1× · 240 words/min</option><option value="2">2× · brisk</option><option value="4">4× · very aligned</option></select></label>
+      <button id="play" type="submit" disabled>Play recording</button>
+      <button id="stop" type="button" disabled>Stop</button>
+    </form>
+    <div class="status-row"><p id="status" role="status">Finding the meeting about the meeting…</p><span id="phase">Office idle</span></div>
+    <canvas id="office" width="1100" height="800" role="img" aria-label="Six-seat office replay. The full speech and vote record is available in the transcript below."></canvas>
+    <p class="flavor" id="flavor">Synergizing stakeholder alignment…</p>
+    <section class="transcript" aria-labelledby="transcript-heading">
+      <h2 id="transcript-heading">Recording transcript</h2>
+      <p class="muted">Original Markdown is shown as text. Vote colors: green = support, amber = conditional, red = oppose, gray = abstain. Unknown votes stay unmarked.</p>
+      <div id="history"></div>
+      <article id="current"><h3 id="speaker">Meeting record</h3><pre id="speech">Select a recording to take a seat.</pre></article>
+    </section>
+    <footer><strong>Live generation: not implemented.</strong> Model configuration and CLI sign-in are planned for a later milestone. All text here comes from saved files.</footer>
+  </main>
+</body>
+</html>

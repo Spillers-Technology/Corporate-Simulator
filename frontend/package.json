@@ -1,0 +1,15 @@
+{
+  "name": "corporate-simulator-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --dev",
+    "build": "node scripts/build.js",
+    "lint": "eslint .",
+    "test": "node --test"
+  },
+  "devDependencies": { "eslint": "^9.39.0" }
+}
