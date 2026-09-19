@@ -85,6 +85,36 @@ Everything else (Phase 2 drafts, Phase 3 debate, Phase 4 vote, Phase 5 minutes) 
 mechanically re-runnable via subprocess dispatch, exactly as this session just did it by
 hand for seats 2–6.
 
+## 2a. Live-generation mode needs read-write, not read-only
+
+Confirmed with Joey (2026-09-19): pointing the app at an existing real data folder isn't
+just for reading history — a finished live meeting should **write back into that same
+folder, in its existing shape**, so the *next* meeting benefits from it. This is not new
+behavior to invent; it's `BOARD_PROCEDURE.md`'s own Phase 6/7 mechanics, which this
+repo's replay-only MVP intentionally doesn't need yet (it only ever reads *already
+finished* meetings):
+
+- A new live meeting creates a new `<date>-<slug>/` directory in the same shape replay
+  mode already parses (§5) — motion, sealed founder draft, per-seat drafts, debate,
+  vote, minutes, decision record.
+- Phase 6/7 folds materially-changed beliefs back into each simulated seat's own
+  `seats/0N-*.md` dossier file (predictions, belief-confidence updates) — the same file
+  replay mode already reads *from* (§5's "optional board roster overlay") now also gets
+  written *to*.
+- A resolved/new prediction appends to a predictions ledger file, same convention as
+  `board/ledger/predictions.md`.
+
+**Consequence for the data mount:** `docker-compose.yml`'s current `DATA_DIR` mount is
+`:ro` (read-only) because replay-only mode never needs to write. Live-generation mode
+changes that to a read-write mount — worth flagging loudly in whatever UI/setup flow
+introduces live mode for the first time (a self-hoster pointing this at their *real*
+process should understand the app will now create/modify files there, not just read
+them), and worth a real test for the same containment logic §4's Authentication note
+and this repo's own path-safety discipline already care about (writes need the same
+"stays inside DATA_DIR" guarantee reads already enforce — see `backend/src/parser.js`'s
+`inside()` helper from the replay-mode implementation, which the write path should reuse
+rather than re-derive).
+
 ## 3. Recommended stack
 
 **Frontend:** Plain HTML5 Canvas (or a light 2D lib like Kaboom.js/Phaser if astra wants
