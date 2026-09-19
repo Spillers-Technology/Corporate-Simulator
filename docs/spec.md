@@ -252,20 +252,32 @@ around joints, à la South Park's construction-paper style) is cheap to build, e
 swap heads on, and reads as charming rather than uncanny at this art scale. Good fit for
 a canvas-based 2D renderer already committed to in §3.
 
-**The one real caution, worth stating plainly rather than skipping past:** if a seat's
-dossier is explicitly modeled on a named real person's published work (this repo's
-board process already has one such seat — Security/Seat 3 draws on a Troy-Hunt-inspired
-lens, and `board/RULES.md` §1 is explicit that "your name and career are invented" and
-"do not speak as a real human, claim their endorsement, or attribute invented quotes to
-them"). A text disclaimer carries that boundary today. **A photoreal face of an actual
-identifiable person, animated and voicing invented dialogue, is a meaningfully bigger
-step than a text disclaimer** — it visually reads as "this real person said this,"
-regardless of a caption underneath saying otherwise. Recommendation: keep every seat's
-avatar an invented or clearly-stylized/cartoonish face — never a real photo of a real
-identifiable person — even for a seat whose *lens* draws on someone real's published
-work. The founder seat (Joey's own, unsimulated) is the one place a real photo is
-actually fine, since that seat is explicitly him, not a character voicing invented
-opinions.
+**The one real caution, resolved, not skipped past:** if a seat's dossier is explicitly
+modeled on a named real person's published work (this repo's board process already has
+one such seat — Security/Seat 3 draws on a Troy-Hunt-inspired lens, and `board/RULES.md`
+§1 is explicit that "your name and career are invented" and "do not speak as a real
+human, claim their endorsement, or attribute invented quotes to them"), the avatar for
+that seat is never a literal, unedited photo of the real person. The reason South Park
+gets to parody real people isn't the disclaimer — it's that nobody watching is confused
+for a second whether that's really the person; the obvious cartoon stylization *is* the
+thing doing the legal and ethical work. An unedited photographic likeness, animated and
+voicing invented dialogue, doesn't get that same protection just because a disclaimer
+ran five seconds earlier — especially once a clip gets cut out of context (this is
+explicitly headed to YouTube, per Joey).
+
+**The resolution: stylize, don't disclaim-only.** Run any real reference photo through a
+cartoonization/stylization pass (a filter, not a photoreal crop) before it becomes an
+avatar — same South Park move, automated. That gets the recognizable homage *and* the
+obvious-cartoon signal that actually carries the parody defense. Pair it, don't replace
+it, with:
+
+**Also ship: a ~5-second load-screen disclaimer** at the start of every session/replay —
+plain language, something like *"This is a parody / generated simulation. No real person
+said any of this."* Good practice regardless of the avatar question, cheap to build, and
+the right first thing a viewer sees whether or not a clip gets cut down later.
+
+The founder seat (Joey's own, unsimulated) is the one place an actual unstylized photo is
+fine, since that seat is explicitly him, not a character voicing invented opinions.
 
 ## 6c. Text-to-speech
 
