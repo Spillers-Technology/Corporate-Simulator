@@ -9,6 +9,7 @@ const assets = new Map([
   ['/src/app.js', ['src/app.js', 'text/javascript']],
   ['/src/scene.js', ['src/scene.js', 'text/javascript']],
   ['/src/state.js', ['src/state.js', 'text/javascript']],
+  ['/src/navigation.js', ['src/navigation.js', 'text/javascript']],
   ['/src/config.js', ['src/config.js', 'text/javascript']],
   ['/src/style.css', ['src/style.css', 'text/css']]
 ]);

@@ -5,6 +5,11 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- Replay table of contents (per-phase and per-seat jump targets), a drag-to-seek
+  timeline slider with phase tick marks, next-phase/next-speaker skip buttons, and a
+  speed control that's now changeable mid-playback (fast-forward).
+
 ## [0.1.0] - 2026-09-19
 
 ### Added

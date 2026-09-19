@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listMeetings, parseMeeting, frontmatter, passages, votesFrom } from '../src/parser.js';
-import { recording } from '../src/replay.js';
+import { navigation, recording } from '../src/replay.js';
 import { createServer } from '../src/server.js';
 
 const fixture = fileURLToPath(new URL('../test-fixtures/synthetic-demo', import.meta.url));
@@ -41,6 +41,57 @@ test('replay preserves every artifact and sequences founder, timestamped drafts,
   }
   assert.ok(events.filter(e => e.phase === 5 && e.type === 'text').every(e => e.voice === 'clerk' && e.seat === null));
   assert.equal(events.at(-1).type, 'complete');
+});
+test('event indexes are stable and monotonic, and the table of contents points at real events', async () => {
+  const meeting = await parseMeeting(fixture, '_root');
+  const events = [...recording(meeting)];
+  assert.deepEqual(events.map(event => event.index), events.map((_event, index) => index));
+  const { toc, totalEvents } = navigation(meeting);
+  assert.equal(totalEvents, events.length);
+  assert.deepEqual(toc.map(entry => entry.phase), [0, 1, 2, 3, 4, 5, 6]);
+  for (const entry of toc) {
+    assert.equal(events[entry.startEvent].type, 'phase');
+    assert.equal(events[entry.startEvent].phase, entry.phase);
+    assert.equal(events[entry.startEvent].label, entry.label);
+  }
+  // Phase 2 is the one phase with sub-structure: five independent drafts, each addressable.
+  const drafts = toc.find(entry => entry.phase === 2).seats;
+  assert.equal(drafts.length, 5);
+  assert.ok(!drafts.some(seat => seat.seat === 1)); // The founder's own draft is Phase 1.
+  for (const seat of drafts) {
+    assert.equal(events[seat.startEvent].type, 'speech-start');
+    assert.equal(events[seat.startEvent].seat, seat.seat);
+    assert.equal(seat.name, meeting.seats.find(entry => entry.seat === seat.seat).name);
+  }
+  assert.ok(toc.filter(entry => entry.phase !== 2).every(entry => entry.seats === undefined));
+  // Navigation must not consume or mutate anything: a second walk is identical.
+  assert.deepEqual(navigation(meeting), { toc, totalEvents });
+});
+test('a seek streams the skipped events in full, only without delay', async t => {
+  const meeting = await parseMeeting(fixture, '_root');
+  const { toc, totalEvents } = navigation(meeting);
+  const base = await server(t);
+  const whole = await (await fetch(`${base}/api/meetings/_root/events`)).text();
+  const debate = toc.find(entry => entry.phase === 3).startEvent;
+  const seeked = await (await fetch(`${base}/api/meetings/_root/events?from=${debate}`)).text();
+  // Identical event sequence either way — client state builds up the same, by construction.
+  assert.equal(seeked, whole);
+  assert.match(whole, /^id: 0\nevent: phase\n/);
+  assert.match(whole, new RegExp(`id: ${totalEvents - 1}\nevent: complete\n`));
+  for (const value of ['-1', '1.5', 'nope', '', ' 3', '1e3', 'Infinity']) {
+    assert.equal((await fetch(`${base}/api/meetings/_root/events?from=${encodeURIComponent(value)}`)).status, 400, value);
+  }
+  assert.equal((await fetch(`${base}/api/meetings/_root/events?from=0&speed=4`)).status, 200);
+});
+test('seeking past an event skips its pacing entirely', async t => {
+  const { totalEvents } = navigation(await parseMeeting(fixture, '_root'));
+  const base = await server(t, { tickMs: 40 });
+  const start = Date.now();
+  // Paced, this recording is minutes long; fully fast-forwarded it is bounded by I/O.
+  await (await fetch(`${base}/api/meetings/_root/events?from=${totalEvents}`)).text();
+  const unpaced = Date.now() - start;
+  assert.ok(unpaced < 2000, `fast-forward took ${unpaced}ms`);
+  assert.ok(totalEvents * 40 > 20000, 'fixture is long enough for this to mean something');
 });
 test('YAML, section positions, names, and unknown prose do not invent attribution', () => {
   assert.equal(frontmatter('---\nseat: 2\ncontext:\n  - test\n---\nHello').text, 'Hello');
@@ -91,7 +142,11 @@ test('rejects traversal and escaping artifact and meeting symlinks', async t => 
 test('REST and SSE return metadata, all events and errors without private paths', async t => {
   const base = await server(t);
   assert.equal((await (await fetch(`${base}/api/meetings`)).json()).meetings[0].id, '_root');
-  assert.equal((await (await fetch(`${base}/api/meetings/_root`)).json()).seats.length, 6);
+  const metadata = await (await fetch(`${base}/api/meetings/_root`)).json();
+  assert.equal(metadata.seats.length, 6);
+  assert.equal(metadata.totalEvents, [...recording(await parseMeeting(fixture, '_root'))].length);
+  assert.deepEqual(metadata.toc.map(entry => entry.phase), [0, 1, 2, 3, 4, 5, 6]);
+  assert.equal(metadata.toc.find(entry => entry.phase === 2).seats.length, 5);
   const response = await fetch(`${base}/api/meetings/_root/events?speed=4`);
   assert.match(response.headers.get('content-type'), /text\/event-stream/);
   const body = await response.text();

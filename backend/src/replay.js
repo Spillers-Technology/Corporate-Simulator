@@ -1,7 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { passages } from './parser.js';
 
-export function* recording(meeting) {
+function* sequence(meeting) {
   const { drafts, seats, artifacts, votes } = meeting;
   const ordered = drafts.filter(draft => draft.seat !== 1).toSorted((a, b) => {
     return (a.generated ? Date.parse(a.generated) : Infinity) -
@@ -29,11 +29,38 @@ export function* recording(meeting) {
   yield { type: 'complete' };
 }
 
-export async function streamReplay(response, meeting, { speed = 1, signal, tickMs = 250 } = {}) {
-  let id = 0;
+// The single source of truth for what gets streamed, now with a stable, monotonic
+// event index starting at 0. Every navigation target (table of contents, timeline
+// slider, skip buttons, `from=`) is expressed in these indexes, so a target can never
+// drift from the stream it addresses: both come from this one generator.
+export function* recording(meeting) {
+  let index = 0;
+  for (const event of sequence(meeting)) yield { index: index++, ...event };
+}
+
+// Pure: same recording, walked once, reduced to navigable seams. Phase 2 is the only
+// phase with real sub-structure (five independent, unordered drafts), so its entry
+// additionally carries per-seat start indexes.
+export function navigation(meeting) {
+  const toc = [];
+  let totalEvents = 0;
+  for (const event of recording(meeting)) {
+    totalEvents = event.index + 1;
+    if (event.type === 'phase') {
+      toc.push({ phase: event.phase, label: event.label, startEvent: event.index, ...(event.phase === 2 ? { seats: [] } : {}) });
+    }
+    if (event.type === 'speech-start' && event.phase === 2) {
+      const name = meeting.seats.find(seat => seat.seat === event.seat)?.name ?? `Seat ${event.seat}`;
+      toc.find(entry => entry.phase === 2)?.seats.push({ seat: event.seat, name, startEvent: event.index });
+    }
+  }
+  return { toc, totalEvents };
+}
+
+export async function streamReplay(response, meeting, { speed = 1, signal, tickMs = 250, from = 0 } = {}) {
   for (const event of recording(meeting)) {
     if (signal.aborted || response.destroyed) return;
-    const ready = response.write(`id: ${++id}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+    const ready = response.write(`id: ${event.index}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
     if (!ready) {
       await new Promise(resolve => {
         const finish = () => {
@@ -42,7 +69,11 @@ export async function streamReplay(response, meeting, { speed = 1, signal, tickM
         response.once('drain', finish); response.once('close', finish);
       });
     }
-    const wait = event.type === 'text' ? tickMs : ['phase', 'speech-end', 'vote'].includes(event.type) ? tickMs * 3 : 0;
+    // Seeking is the same stream, time-compressed: everything before `from` is still
+    // emitted in full so client state (transcript, tally, current speaker) builds up
+    // exactly as a play-through would leave it — just with no delay at all.
+    const paced = event.index >= from;
+    const wait = !paced ? 0 : event.type === 'text' ? tickMs : ['phase', 'speech-end', 'vote'].includes(event.type) ? tickMs * 3 : 0;
     if (wait) {
       try { await delay(wait / speed, undefined, { signal }); }
       catch (error) { if (error.name === 'AbortError') return; throw error; }

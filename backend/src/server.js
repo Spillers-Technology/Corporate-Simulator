@@ -2,7 +2,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { listMeetings, MeetingError, parseMeeting } from './parser.js';
-import { streamReplay } from './replay.js';
+import { navigation, streamReplay } from './replay.js';
 
 export function createServer({ dataDir, tickMs = 250 }) {
   return http.createServer(async (request, response) => {
@@ -21,13 +21,21 @@ export function createServer({ dataDir, tickMs = 250 }) {
       const id = decodeURIComponent(match[1]);
       const speed = Number(url.searchParams.get('speed') ?? 1);
       if (!Number.isFinite(speed) || speed < 0.5 || speed > 4) throw new MeetingError('Speed must be between 0.5 and 4.', 400);
+      const fromParam = url.searchParams.get('from');
+      const from = fromParam === null ? 0 : Number(fromParam);
+      if (fromParam !== null && (!/^\d+$/.test(fromParam) || !Number.isSafeInteger(from))) {
+        throw new MeetingError('From must be a non-negative whole event index.', 400);
+      }
       const meeting = await parseMeeting(dataDir, id);
-      if (!match[2]) return json(200, { id, title: meeting.title, mode: meeting.mode, phase: meeting.phase, seats: meeting.seats });
+      if (!match[2]) {
+        const { toc, totalEvents } = navigation(meeting);
+        return json(200, { id, title: meeting.title, mode: meeting.mode, phase: meeting.phase, seats: meeting.seats, toc, totalEvents });
+      }
       const controller = new AbortController();
       response.on('close', () => controller.abort());
       response.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
       response.flushHeaders();
-      await streamReplay(response, meeting, { speed, tickMs, signal: controller.signal });
+      await streamReplay(response, meeting, { speed, from, tickMs, signal: controller.signal });
     } catch (error) {
       if (response.headersSent) { response.end(); return; }
       if (error instanceof URIError) return json(400, { error: 'Invalid meeting ID.' });
