@@ -3,6 +3,9 @@ name: Deploy Pages
 on:
   push:
     branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,49 +25,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      # NOTE for whoever wires up the real frontend/demo build (astra): once
-      # frontend/ produces a real static build (landing page + interactive demo,
-      # per docs/spec.md), replace the placeholder-site steps below with an
-      # actual `npm ci && npm run build` in frontend/ and upload frontend's build
-      # output directory instead of site/. Keep the placeholder path working as a
-      # fallback only if the real build isn't present yet, mirroring ci.yml's
-      # "skip gracefully if the app doesn't exist yet" pattern.
-      - name: Check for real frontend build output
-        id: check
-        run: |
-          if [ -f frontend/package.json ]; then
-            echo "has_app=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_app=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.has_app == 'true'
-        with:
-          node-version: "22.x"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Build real frontend
-        if: steps.check.outputs.has_app == 'true'
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-      - name: Select Pages source
-        id: source
-        run: |
-          if [ "${{ steps.check.outputs.has_app }}" = "true" ] && [ -d frontend/dist ]; then
-            echo "dir=frontend/dist" >> "$GITHUB_OUTPUT"
-          else
-            echo "dir=site" >> "$GITHUB_OUTPUT"
-          fi
-
+      # Pages is deliberately always a static landing page (site/), never the real
+      # app build (frontend/). The app requires a live backend (REST/SSE replay,
+      # eventually live-generation) that static Pages hosting cannot run — deploying
+      # it there would just show visitors a permanently broken "backend unavailable"
+      # screen instead of an intentional page. If a hosted demo (backend + frontend
+      # both actually running somewhere) ever exists, linking to *that* from this
+      # landing page is the right move, not swapping Pages' own content for the app
+      # shell. See docs/spec.md for the self-hosting path in the meantime.
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.source.outputs.dir }}
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4

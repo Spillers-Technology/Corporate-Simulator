@@ -57,11 +57,20 @@
   a { color: var(--accent); }
   footer { color: var(--muted); font-size: 0.85rem; margin-top: 2rem; }
   code { background: var(--border); padding: 0.1rem 0.35rem; border-radius: 4px; }
+  pre {
+    background: var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; border-radius: 0; }
 </style>
 </head>
 <body>
 <main>
-  <span class="status">Early scaffold — demo not live yet</span>
+  <span class="status">v0.1.0 — replay mode, self-hosted</span>
   <h1>Corporate-Simulator</h1>
   <p class="tagline">A tiny animated office where a fixed cast of simulated board members
   argue over your decisions — for real.</p>
@@ -71,13 +80,33 @@
     isolated reviewers, each on a genuinely different model, draft independent positions
     on a motion you write, debate once, vote, and hand you a decision record — rendered
     as a 2D top-down office, streamed live as it's generated.</p>
-    <p>The interactive demo (a redacted, real session you can watch play out) lands here
-    once it's built. In the meantime:</p>
+    <p>This page is a landing page, not the app itself — the app needs a live backend
+    (and, soon, real model dispatch) that static hosting can't run, so trying it means
+    running it, not clicking a button here yet. Ten-ish minutes, no Docker required:</p>
+    <pre><code># clone, then:
+npm --prefix backend ci &amp;&amp; DATA_DIR="$PWD/backend/test-fixtures" npm --prefix backend start
+# in a second terminal:
+npm --prefix frontend ci &amp;&amp; npm --prefix frontend run build
+BACKEND_URL=http://localhost:4000 npm --prefix frontend start
+# open http://localhost:3000</code></pre>
+    <p>Or point <code>DATA_DIR</code> at your own real board-style process directory
+    instead of the bundled synthetic fixture — see the README for the full shape.</p>
     <ul>
       <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator">Source on GitHub</a></li>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/releases/tag/v0.1.0">v0.1.0 release</a></li>
       <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/docs/spec.md">Design spec</a></li>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Self-hosting instructions</a></li>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Full self-hosting instructions</a></li>
     </ul>
+  </div>
+
+  <div class="card">
+    <p><strong>What's real today:</strong> read a finished board-style meeting (motion,
+    sealed founder position, isolated reviewer drafts, debate, vote, decision record) and
+    watch it play out — six seats, a distinctly-rendered human founder, progressive
+    speech, vote gestures, a separate non-binding clerk pass.</p>
+    <p><strong>Not built yet:</strong> live generation (actually dispatching models for a
+    new motion), the model-configuration console, CLI sign-in, avatars, sound. Watch the
+    repo for those.</p>
   </div>
 
   <footer>
