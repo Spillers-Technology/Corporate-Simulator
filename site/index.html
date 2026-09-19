@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corporate-Simulator</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #faf9f6;
+    --fg: #1a1a1a;
+    --muted: #6b6b6b;
+    --accent: #2f5d50;
+    --card: #ffffff;
+    --border: #e4e1d8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --fg: #ececec;
+      --muted: #9a9a9a;
+      --accent: #6fb6a3;
+      --card: #1c1f24;
+      --border: #2a2d33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-block: 4rem;
+    padding-inline: 1.25rem;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  .tagline { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-block: 1.5rem;
+  }
+  .status {
+    display: inline-block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    margin-bottom: 1rem;
+  }
+  a { color: var(--accent); }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 2rem; }
+  code { background: var(--border); padding: 0.1rem 0.35rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="status">Early scaffold — demo not live yet</span>
+  <h1>Corporate-Simulator</h1>
+  <p class="tagline">A tiny animated office where a fixed cast of simulated board members
+  argue over your decisions — for real.</p>
+
+  <div class="card">
+    <p>Corporate-Simulator runs and visualizes a board-style adversarial-review process:
+    isolated reviewers, each on a genuinely different model, draft independent positions
+    on a motion you write, debate once, vote, and hand you a decision record — rendered
+    as a 2D top-down office, streamed live as it's generated.</p>
+    <p>The interactive demo (a redacted, real session you can watch play out) lands here
+    once it's built. In the meantime:</p>
+    <ul>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator">Source on GitHub</a></li>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/docs/spec.md">Design spec</a></li>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Self-hosting instructions</a></li>
+    </ul>
+  </div>
+
+  <footer>
+    MIT licensed. A <a href="https://github.com/Spillers-Technology">Spillers Technology</a> project.
+  </footer>
+</main>
+</body>
+</html>

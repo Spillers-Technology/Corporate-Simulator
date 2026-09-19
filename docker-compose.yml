@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      - PORT=4000
+      - DATA_DIR=/data
+    volumes:
+      # Point this at your own real board-process data directory to run against
+      # real data. Defaults to the bundled, hand-redacted demo fixture — never
+      # mount real private data into a build of this image that gets published
+      # anywhere; this is a local override for local use.
+      - ${DATA_DIR:-./demo-data}:/data:ro
+      # Each CLI (claude, codex) manages its own login/credential state. Persist
+      # that across container restarts in a named volume rather than baking it
+      # into an image layer or re-implementing credential storage — see
+      # docs/spec.md's Authentication subsection.
+      - cli-auth-claude:/home/node/.config/claude
+      - cli-auth-codex:/home/node/.codex
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - BACKEND_URL=http://backend:4000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  cli-auth-claude:
+  cli-auth-codex:

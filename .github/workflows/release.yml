@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  images:
+    name: Build & push container images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Dockerfile exists yet
+        id: check
+        run: |
+          if [ -f "${{ matrix.service }}/Dockerfile" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${{ matrix.service }}/Dockerfile not present yet — skipping image build"
+          fi
+
+      - uses: docker/login-action@v3
+        if: steps.check.outputs.exists == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        if: steps.check.outputs.exists == 'true'
+        with:
+          context: ${{ matrix.service }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/corporate-simulator-${{ matrix.service }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/corporate-simulator-${{ matrix.service }}:latest
+
+  github-release:
+    name: Draft GitHub release
+    needs: images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract changelog section
+        id: notes
+        run: |
+          # Pulls the [Unreleased] section as a starting point for release notes;
+          # whoever cuts the release should hand-edit before publishing, same
+          # convention as SpoolSmith's releases/vX.Y.Z.md files.
+          awk '/^## \[Unreleased\]/{flag=1;next}/^## \[/{flag=0}flag' CHANGELOG.md > notes.md || true
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          body_path: notes.md

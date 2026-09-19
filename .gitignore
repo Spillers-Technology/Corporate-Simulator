@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Env / secrets — CLI auth state is a mounted volume, never committed (see docs/spec.md)
+.env
+.env.*
+!.env.example
+
+# Local data mounts — real private data never belongs in this repo (see CONTRIBUTING.md)
+/data/
+/local-data/
+
+# Editor/OS
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

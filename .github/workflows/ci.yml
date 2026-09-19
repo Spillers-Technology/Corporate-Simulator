@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  repo-hygiene:
+    name: Repo hygiene (STD-002/STD-007-shaped checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: LICENSE exists
+        run: test -f LICENSE
+      - name: PR template exists and has required sections
+        run: |
+          f=.github/PULL_REQUEST_TEMPLATE.md
+          test -f "$f"
+          grep -q "## What changed" "$f"
+          grep -q "## How it was checked" "$f"
+          grep -q "## Evidence" "$f"
+          grep -q -i "data safety" "$f"
+      - name: CHANGELOG exists
+        run: test -f CHANGELOG.md
+      - name: demo-data has no obvious secrets
+        run: |
+          if [ -d demo-data ]; then
+            ! grep -rIl -E "BEGIN (RSA|OPENSSH|PGP) PRIVATE KEY|api[_-]?key|secret" demo-data/ || \
+              (echo "::error::possible secret pattern found under demo-data/" && exit 1)
+          fi
+
+  frontend:
+    name: Frontend (lint/build/test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if frontend app exists yet
+        id: check
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::frontend/package.json not present yet — skipping, nothing to build"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm ci
+      - name: Lint
+        if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm run lint --if-present
+      - name: Test
+        if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm test --if-present
+      - name: Build
+        if: steps.check.outputs.exists == 'true'
+        working-directory: frontend
+        run: npm run build --if-present
+
+  backend:
+    name: Backend (lint/build/test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if backend app exists yet
+        id: check
+        run: |
+          if [ -f backend/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::backend/package.json not present yet — skipping, nothing to build"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+      - name: Install
+        if: steps.check.outputs.exists == 'true'
+        working-directory: backend
+        run: npm ci
+      - name: Lint
+        if: steps.check.outputs.exists == 'true'
+        working-directory: backend
+        run: npm run lint --if-present
+      - name: Test
+        if: steps.check.outputs.exists == 'true'
+        working-directory: backend
+        run: npm test --if-present
+      - name: Build
+        if: steps.check.outputs.exists == 'true'
+        working-directory: backend
+        run: npm run build --if-present

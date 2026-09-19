@@ -1,0 +1,70 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # NOTE for whoever wires up the real frontend/demo build (astra): once
+      # frontend/ produces a real static build (landing page + interactive demo,
+      # per docs/spec.md), replace the placeholder-site steps below with an
+      # actual `npm ci && npm run build` in frontend/ and upload frontend's build
+      # output directory instead of site/. Keep the placeholder path working as a
+      # fallback only if the real build isn't present yet, mirroring ci.yml's
+      # "skip gracefully if the app doesn't exist yet" pattern.
+      - name: Check for real frontend build output
+        id: check
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "has_app=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_app=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.has_app == 'true'
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build real frontend
+        if: steps.check.outputs.has_app == 'true'
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Select Pages source
+        id: source
+        run: |
+          if [ "${{ steps.check.outputs.has_app }}" = "true" ] && [ -d frontend/dist ]; then
+            echo "dir=frontend/dist" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=site" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.source.outputs.dir }}
+      - id: deployment
+        uses: actions/deploy-pages@v4
