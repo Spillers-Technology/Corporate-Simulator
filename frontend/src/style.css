@@ -1,6 +1,9 @@
 :root { color-scheme: dark; font-family: system-ui, sans-serif; color: #e8e8de; background: #111b24; }
 * { box-sizing: border-box; }
 body { margin: 0; }
+/* `hidden` must win over any display rule below it — the mode panels and the staged
+   founder form are shown and hidden by that attribute alone. */
+[hidden] { display: none !important; }
 main { max-width: 1164px; padding: 36px 32px; margin: auto; }
 header, .status-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 h1 { font-size: clamp(24px, 4vw, 38px); margin: 5px 0; letter-spacing: -1px; }
@@ -16,6 +19,32 @@ button { background: #d9f097; color: #1b2a24; font-weight: 700; cursor: pointer;
 #stop { background: transparent; color: #e8e8de; }
 :disabled { opacity: .5; cursor: default; }
 :focus-visible { outline: 3px solid #f4bd65; outline-offset: 4px; }
+.modes { display: flex; gap: 8px; margin-top: 18px; border-bottom: 1px solid #384751; }
+.mode { background: transparent; color: #a7b5bc; border: 0; border-bottom: 3px solid transparent;
+  border-radius: 6px 6px 0 0; font-weight: 600; font-size: 14px; padding: 10px 16px; }
+.mode:hover { color: #e8e8de; background: #1c2a34; }
+.mode[aria-selected="true"] { color: #d9f097; border-bottom-color: #d9f097; }
+/* New-meeting forms stack; the replay control bar stays a single row. */
+form.stack { display: block; margin-top: 22px; }
+.stack-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stack h2 { font-size: 17px; margin: 0; }
+/* A sealed badge carries the meeting ID, which can be long: it must wrap, unlike the
+   short fixed badge in the header. */
+.stack-head .badge { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.stack label { margin-top: 16px; }
+.stack input, .stack textarea, .stack select { font: inherit; font-size: 14px; width: 100%;
+  background: #111b24; color: #e8e8de; border: 1px solid #536370; border-radius: 5px; padding: 10px 12px; }
+.stack textarea { resize: vertical; line-height: 1.6; }
+.stack :read-only:not(select), .stack.sealed select { background: #16222c; color: #bfd0d6; border-style: dashed; }
+.stack.sealed .badge { border-color: #d9f097; color: #d9f097; }
+.preview { margin-top: 20px; background: #16222c; border: 1px solid #3c505c; border-radius: 8px; padding: 4px 16px 12px; }
+.preview h3 { letter-spacing: 1px; text-transform: uppercase; font-size: 12px; color: #a2c6bb; }
+.preview pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+  max-height: 340px; overflow: auto; margin: 0; }
+#motion-commit, #founder-commit { margin-top: 18px; }
+.note { margin-top: 26px; background: #1c2a34; border-left: 3px solid #d3b7ed; border-radius: 0 8px 8px 0; padding: 4px 20px 14px; }
+.note h2 { font-size: 16px; }
+.note p { font-size: 14px; line-height: 1.7; }
 .status-row { font-size: 13px; min-height: 60px; }
 #phase { color: #d9f097; text-align: right; }
 .timeline { background: #1c2a34; border-radius: 10px; padding: 16px 20px 10px; margin-bottom: 20px; }
@@ -51,4 +80,5 @@ article.clerk { border-color: #d3b7ed; background: #282738; }
 footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid #384751; }
 @media (max-width: 900px) { .stage { grid-template-columns: minmax(0, 1fr); } .toc { max-height: 320px; } }
 @media (max-width: 600px) { main { padding: 20px 12px; } header { flex-wrap: wrap; } form { padding: 14px; } .status-row { align-items: start; }
+  .modes { flex-wrap: wrap; } .mode { flex: 1; padding: 10px 8px; }
   .timeline { padding: 12px; } .skips { flex: 1; } .skips button { flex: 1; } }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { initialState, applyEvent, speakerLabel } from '../src/state.js';
 import { currentTarget, nextPhase, nextSpeaker, offset, targets } from '../src/navigation.js';
+import { founderMarkdown, missing, motionMarkdown, slugPreview } from '../src/create.js';
 import { createServer } from '../server.js';
 
 const toc = [
@@ -82,6 +83,55 @@ test('frontend serves relative assets, proxies REST and streams SSE before upstr
   finish();
   assert.match(new TextDecoder().decode((await reader.read()).value), /event: complete/);
   await reader.cancel();
+});
+test('the motion and founder previews show exactly the shapes the backend writes', () => {
+  const motion = motionMarkdown({ title: 'Duck throne', decision: 'Authorize one throne.', cost: '', deadline: '', links: '' });
+  assert.match(motion, /^# Duck throne\n/);
+  assert.deepEqual(motion.match(/^## .+$/gm), ['## Decision', '## Cost', '## Deadline', '## Links']);
+  // Unfilled optional sections keep the shape instead of vanishing from the preview.
+  assert.match(motion, /## Deadline\n\nNone stated\./);
+  const draft = founderMarkdown({ name: 'Pip Papercloud', position: 'support', summary: 'Yes.' });
+  assert.match(draft, /^---\nseat: 01-founder\nname: Pip Papercloud\nmodel: n\/a — not simulated\n/);
+  assert.deepEqual(draft.match(/^## .+$/gm),
+    ['## POSITION', '## SUMMARY', '## ARGUMENT', '## COST I SEE', '## WHAT WOULD CHANGE MY MIND', '## PREDICTION']);
+  // The preview never claims a timestamp it does not have yet.
+  assert.match(draft, /generated: <set when sealed>/);
+  assert.equal(slugPreview('Buy the duck a throne!', '2026-09-19'), '2026-09-19-buy-the-duck-a-throne');
+  assert.equal(slugPreview('   ', '2026-09-19'), null);
+  assert.deepEqual(missing({ title: 'x', decision: '  \n ' }, ['title', 'decision']), ['decision']);
+});
+test('the page offers both modes and states plainly that live seats do not exist', async t => {
+  const base = await listen(t, createServer({ backendUrl: 'http://127.0.0.1:1', root: new URL('../', import.meta.url) }));
+  const html = await (await fetch(base)).text();
+  assert.match(html, /id="mode-replay"/);
+  assert.match(html, /id="mode-create"/);
+  assert.match(html, /id="replay-mode"/);
+  assert.match(html, /id="create-mode"/);
+  assert.match(html, /Seal &amp; Commit motion/);
+  assert.match(html, /Seal &amp; Commit founder draft/);
+  assert.match(html, /sealed through Phase 1; live seat generation isn't implemented yet/);
+  assert.equal((await fetch(`${base}/src/create.js`)).status, 200);
+});
+test('the proxy forwards a human-input POST body upstream and relays the response', async t => {
+  let seen = null;
+  const upstream = http.createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    seen = { method: request.method, url: request.url, body: Buffer.concat(chunks).toString('utf8') };
+    response.writeHead(201, { 'Content-Type': 'application/json' });
+    response.end('{"id":"2026-09-19-duck-throne","sealed":["00-motion.md"]}');
+  });
+  const backendUrl = await listen(t, upstream);
+  const base = await listen(t, createServer({ backendUrl, root: new URL('../', import.meta.url) }));
+  const response = await fetch(`${base}/api/meetings`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: 'Duck throne' })
+  });
+  assert.equal(response.status, 201);
+  assert.equal((await response.json()).id, '2026-09-19-duck-throne');
+  assert.deepEqual(seen, { method: 'POST', url: '/api/meetings', body: '{"title":"Duck throne"}' });
+  // Static assets stay GET-only even though the API now accepts POST.
+  assert.equal((await fetch(`${base}/index.html`, { method: 'POST' })).status, 405);
+  assert.equal((await fetch(`${base}/api/meetings`, { method: 'DELETE' })).status, 405);
 });
 test('backend failure is a useful 502 response', async t => {
   const base = await listen(t, createServer({ backendUrl: 'http://127.0.0.1:1' }));
