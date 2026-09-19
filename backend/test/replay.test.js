@@ -126,3 +126,41 @@ test('empty required artifacts and empty draft bodies cannot masquerade as finis
   await writeFile(path.join(root, 'meeting/drafts/01-fictional.md'), '---\nseat: 1\n---\n');
   await assert.rejects(parseMeeting(root, 'meeting'), /Draft body must not be empty/);
 });
+
+test('a founder draft with a free-text provenance note inside its frontmatter still parses', async t => {
+  // Real-world shape, not hypothetical: this repo's own founder-draft convention
+  // sometimes embeds a prose "provenance note" paragraph between the opening and
+  // closing --- delimiters, alongside the actual header fields. That block is not
+  // valid YAML on its own, but the header fields around it must still be extracted.
+  const root = await copy(t);
+  const founder = path.join(root, 'meeting/drafts/01-fictional.md');
+  const original = await readFile(founder, 'utf8');
+  const body = original.slice(original.indexOf('\n---\n', 4) + 5);
+  await writeFile(founder, [
+    '---',
+    'seat: 01-fictional',
+    'name: Fictional Founder',
+    'model: n/a — not simulated',
+    'context: unsimulated, per fictional process.',
+    '',
+    '**Provenance note:** this paragraph is deliberately not valid YAML — it has no',
+    'key: value shape, spans multiple lines, and follows a blank line, which breaks',
+    'plain-scalar folding.',
+    'generated: 2026-01-01',
+    '---',
+    '',
+    body
+  ].join('\n'));
+  const meeting = await parseMeeting(root, 'meeting');
+  const founderSeat = meeting.seats.find(seat => seat.founder);
+  assert.equal(founderSeat.name, 'Fictional Founder');
+  assert.equal(founderSeat.generated, '2026-01-01');
+});
+
+test('one malformed seats/*.md roster file is skipped, not fatal to the whole meeting', async t => {
+  const root = await copy(t);
+  await mkdir(path.join(root, 'seats'), { recursive: true });
+  await writeFile(path.join(root, 'seats/02-fictional.md'), '---\nseat: 02-fictional\nname: [unterminated\n---\n');
+  const meeting = await parseMeeting(root, 'meeting');
+  assert.equal(meeting.seats.length, 6);
+});
