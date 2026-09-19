@@ -73,6 +73,34 @@ console, no CLI sign-in, no avatars, no sound (§13b/§13c). No adversarial-revi
 astra this round — Codex is still rate-limited per §13's own note; the orchestrator
 session re-verifies this work independently before merging.
 
+### 2026-09-19 — Orchestrator verification of the above
+
+Re-ran `lint`/`build`/`test` independently in both packages (23/23 backend, 7/7
+frontend, clean) and read `meeting-writer.js` and the `server.js`/`parser.js` diffs in
+full, not just the implementer's summary. The design holds up: `O_EXCL` as the real
+seal guarantee, `inside()` reused rather than re-derived, pathspec-scoped commits,
+preflight-before-any-write ordering.
+
+**One real finding, confirmed empirically, not just in theory:** two concurrent
+`createMeeting` calls for the *same* meeting ID race. Reproduced directly — fired two
+`Promise.allSettled` calls at once against a throwaway `git init` repo — and the
+second request's rollback deleted the first request's already-written file before its
+`git commit` completed. Failure mode is safe, not silent corruption: **both** requests
+end up rejected and the repository is left clean (no orphaned or half-committed
+state) — but a request that should have succeeded didn't, with a confusing error
+("Could not commit the sealed meeting: On branch main..."). Checked whether the
+frontend can actually trigger this: `create.js` disables the commit button
+synchronously before the request goes out, so a normal single click cannot reach this
+window — it needs two truly concurrent requests (two tabs, a raw API client, or a
+deliberate test, as above). **Documented as a known limitation, not fixed this
+round:** a correct fix needs a real per-meeting-ID lock (or a compare-and-swap on the
+directory's existence at creation time), which is more surface than this narrowly-
+scoped slice should absorb; tracked here so it isn't rediscovered as a surprise.
+
+Verified the browser-tested `demo-data/`/`corporate-strategy` boundary held: this
+orchestrator's own race-condition test ran only against `/tmp/cs-race-test` (a
+disposable `git init` directory created and used for nothing else), never real data.
+
 ## 2026-09-19 — Replay navigation: table of contents, timeline scrubber, fast-forward
 
 Requested per `docs/spec.md` §12 after watching v0.1.0 replay real `corporate-strategy`
