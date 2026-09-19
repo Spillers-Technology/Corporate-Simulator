@@ -489,3 +489,105 @@ above, generalized from discrete jump targets to continuous position.
   unknown until the session actually finishes, so the equivalent control there is a
   growing progress indicator with no fixed right edge, not a scrubber. Keep that UI
   component distinct rather than trying to force a slider to cover both cases.
+
+## 13. Live generation, slice 1: human-input forms + a single live seat (2026-09-19)
+
+The real jump from "replay tool" to "simulator." Deliberately scoped small and
+sequenced, not "wire up all six seats live" in one pass — this is the most
+security-sensitive work in the app so far (real write access to real data, real
+subprocess execution with real credentials), and two earlier real bugs this session
+(the GHCR case bug, the flaky buildx driver) both got caught by testing narrowly and
+watching closely, not by moving fast across a wide surface at once.
+
+**Two concrete facts that shape this slice, verified directly, not assumed:**
+- The standalone `claude` CLI binary is real and invokable as a subprocess here — this
+  is *not* the "no standalone claude CLI" environment `board/README.md`'s own note
+  describes for `corporate-strategy`'s isolated Agent-dispatch fallback; that constraint
+  doesn't apply to this app. `claude -p --output-format stream-json
+  --include-partial-messages` gives genuine token-level streaming over stdout, and
+  `--restricted` strips Bash/tool access — combined with spawning the subprocess in a
+  fresh temp `cwd` (Node's own `child_process` option, no CLI flag needed for this),
+  that reproduces the same "no tools, no repo access" isolation contract
+  `board/RULES.md` §7 already requires, just via subprocess instead of an Agent-tool
+  dispatch.
+- Codex is rate-limited for several more days as of this writing (a real usage-limit
+  error, confirmed by a direct minimal `codex exec` call, not assumed from a hang —
+  see the D-0049 state-file entry and this session's own history). Seat 6 specifically
+  requires non-Anthropic, so a full six-seat live meeting cannot be end-to-end tested
+  until that resets. This slice is scoped to not depend on Codex being available at
+  all — the Claude-backed dispatch path is what actually gets built and tested now.
+
+### 13a. Human-input forms (Phase 0 motion, Phase 1 founder draft)
+
+A "New meeting" mode alongside the existing "Replay" mode. Two forms, matching the
+exact shapes this repo already parses:
+- **Motion:** Decision / Cost / Deadline / Links — free-text fields, assembled into
+  `00-motion.md`'s existing markdown shape (see `backend/src/parser.js`'s expectations).
+- **Founder draft:** POSITION / SUMMARY / ARGUMENT / COST I SEE / WHAT WOULD CHANGE MY
+  MIND / PREDICTION — `board/RULES.md` §6's exact format, the same one every seat's
+  draft already uses.
+
+**Staged, explicit commit — the same pattern already decided for persona edits,
+applied here for the same reason and even more load-bearing:** both forms are pure
+client/server draft state until an explicit "Seal & Commit" action. Nothing is written
+to `DATA_DIR` before that. On commit: scaffold the meeting directory (`mkdir -p
+<date>-<slug>/drafts`, mirroring `board/bin/convene.sh`'s own scaffolding), write
+`00-motion.md` then `drafts/01-founder.md` **in that order** (motion before founder
+draft — `BOARD_PROCEDURE.md`'s load-bearing ordering, "the founder draft must be
+written and committed before any simulated seat runs"), and run a real `git add` +
+`git commit` inside `DATA_DIR` — the exact mechanics this session has been doing by
+hand all day, now automated. Once committed, both files are sealed: the UI does not
+offer to re-edit them (supersede, never edit, per `CLAUDE.md`'s own discipline).
+
+**Consequence for the data mount:** this is what actually triggers §2a's read-write
+change. `docker-compose.yml`'s `DATA_DIR` mount goes from `:ro` to read-write. The write
+path must reuse `backend/src/parser.js`'s existing `inside()` containment helper rather
+than re-deriving path-safety logic — the same "stays inside DATA_DIR" guarantee reads
+already enforce, now required for writes too.
+
+### 13b. A single live seat, proof of concept
+
+Not five seats, not six — **one.** After Phase 0/1 are sealed, offer to dispatch exactly
+one simulated seat (Seat 2, Product & Customer, is a reasonable default — no Codex
+dependency, no cross-model isolation-diversity question to solve yet) live via
+`claude -p`. Concretely:
+- Assemble the exact prompt an isolated seat already receives today (see this session's
+  own Agent-dispatch prompts for the SpoolSmith meeting as a working reference):
+  `board/RULES.md` + that seat's own dossier (`seats/02-*.md`, if present) + the motion
+  file byte-for-byte + any linked records — nothing else, matching `board/RULES.md` §7's
+  isolation contract exactly.
+- Spawn `claude -p --model <seat's assigned model, default sonnet or opus> --restricted
+  --output-format stream-json --include-partial-messages` with `cwd` set to a fresh
+  temp directory (no `--add-dir`, no access to the real repo).
+- **Empirically inspect the actual stream-json output shape before wiring the parser
+  for it** — don't assume the exact message schema from memory or documentation; run a
+  real `claude -p --output-format stream-json --include-partial-messages` call and read
+  its actual JSONL output first, the same "verify the emitted format directly" discipline
+  this app's own replay/SSE design already followed.
+- Map the real stream into the *same* event schema replay mode already emits
+  (`speech-start` / `text` / `speech-end`) — this is the whole point of designing them
+  identically back in §3: the frontend renders a live seat exactly like a replayed one,
+  no new rendering code path.
+- On successful completion: validate the output isn't empty/garbage (same bar
+  `backend/src/parser.js` already applies to a replayed draft), write
+  `drafts/02-*.md` with real frontmatter (seat, name, the actual model used, a `context`
+  string honestly describing this as a live subprocess dispatch, a real `generated`
+  timestamp), and commit it for real.
+- On failure (non-zero exit, timeout, empty/malformed output): surface an honest error.
+  **Never fabricate a draft** — this is `CLAUDE.md`'s own non-negotiable rule, and it's
+  the one place in this whole app where breaking it would be worst: a fake seat opinion
+  written into a real institutional record.
+
+### 13c. What's explicitly deferred past this slice
+
+- Seats 4/6 (Codex-backed) — blocked on the actual usage-limit reset, not a design gap.
+- Fanning out to all five simulated seats concurrently, and Phase 3 (debate)/Phase
+  4 (vote)/Phase 5 (minutes)/Phase 6 (decision record)'s own live generation.
+- The full model-configuration console UI (§4) — this slice needs *a* place to record
+  which model backs Seat 2 (even if the only real choice available today is Claude), but
+  building the complete per-seat roster editor with Seat 6's hard-enforced constraint is
+  its own follow-up once Codex is back and there's a second real model to choose between.
+- CLI sign-in flows (§4's Authentication subsection) — this slice runs against
+  whatever `claude` session is already logged in on the host; a real "sign in from the
+  admin console" flow is deferred until self-hosting by someone other than Joey is
+  actually being tested.
