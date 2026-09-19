@@ -54,10 +54,22 @@ jobs:
       - name: Extract changelog section
         id: notes
         run: |
-          # Pulls the [Unreleased] section as a starting point for release notes;
-          # whoever cuts the release should hand-edit before publishing, same
-          # convention as SpoolSmith's releases/vX.Y.Z.md files.
-          awk '/^## \[Unreleased\]/{flag=1;next}/^## \[/{flag=0}flag' CHANGELOG.md > notes.md || true
+          # Extracts the section matching THIS tag's version (v0.1.0 -> "## [0.1.0]"),
+          # not [Unreleased] — by the time a version is tagged, its real content
+          # should already be moved out of Unreleased and under its own heading
+          # (see CONTRIBUTING.md's release checklist). Falls back to [Unreleased]
+          # only if no matching versioned heading exists yet, so this doesn't
+          # silently produce empty notes on a release-prep slip.
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
+            /^## \[/ {flag=0}
+            flag
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::warning::No CHANGELOG.md section found for [$version] — falling back to [Unreleased]"
+            awk '/^## \[Unreleased\]/{flag=1;next}/^## \[/{flag=0}flag' CHANGELOG.md > notes.md
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           draft: true

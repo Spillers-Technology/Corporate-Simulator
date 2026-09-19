@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-19
+
 ### Added
 - Replay-only Node.js backend: generic meeting parser, REST metadata, timed SSE,
   recorded seat identity, draft positions, vote extraction, and read-only path containment.
