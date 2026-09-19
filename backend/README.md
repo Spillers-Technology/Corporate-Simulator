@@ -16,7 +16,7 @@ reserved directory currently has no approved recording. No files are written.
 ```bash
 curl http://localhost:4000/api/meetings
 curl http://localhost:4000/api/meetings/synthetic-demo
-curl -N 'http://localhost:4000/api/meetings/synthetic-demo/events?speed=1'
+curl -N 'http://localhost:4000/api/meetings/synthetic-demo/events?speed=1&from=0'
 npm --prefix backend run lint
 npm --prefix backend run build
 npm --prefix backend test
@@ -54,19 +54,39 @@ that resolve outside `DATA_DIR` and traversal IDs are rejected.
 
 - `GET /api/health`: service status and `mode: replay`.
 - `GET /api/meetings`: `{ meetings: [{ id, title }], skipped: [{ id, reason }] }`.
-- `GET /api/meetings/:id`: recording metadata and six seats.
-- `GET /api/meetings/:id/events?speed=1`: fresh independent replay stream.
+- `GET /api/meetings/:id`: recording metadata, six seats, `toc`, `totalEvents`.
+- `GET /api/meetings/:id/events?speed=1&from=0`: fresh independent replay stream.
 
 SSE event names and JSON `type` agree: `phase`, `speech-start`, `text`,
-`speech-end`, `vote`, `complete`. Speech events identify `phase`, `seat` (1–6
+`speech-end`, `vote`, `complete`. Every event carries a stable, monotonic
+`index` starting at 0, also sent as the SSE `id:` field; `totalEvents` is how
+many a full replay emits. Speech events identify `phase`, `seat` (1–6
 or null), and `voice` (`seat`, `narrator`, `clerk`). Text events contain an
 incremental `text` chunk, including whitespace. A vote event contains a map
 of recognized seat numbers to votes. Minutes always have the separate clerk
 voice and are labeled non-binding, never evidence. Phase 0 and 6 recordings
 are attributed to the founder; this does not generate or approve human input.
 
+## Navigation (table of contents, seeking)
+
+Metadata's `toc` has one entry per phase — `{ phase, label, startEvent }` — and
+the Phase 2 entry additionally lists its five independent drafts as
+`seats: [{ seat, name, startEvent }]`. Every `startEvent` is an event index in
+the same stream `/events` produces, derived from that same sequence rather than
+computed separately, so the two cannot drift apart.
+
+`from=<event index>` seeks. Events before that index are still emitted, in full
+and in order, so a client's transcript, vote tally, and current speaker build up
+exactly as an uninterrupted play-through would leave them — they are simply sent
+with zero delay; normal pacing resumes at `from`. `from` must be a non-negative
+whole number (400 otherwise); a value past the end fast-forwards everything.
+Seeking is therefore a fresh stream, not a server-side cursor: a client seeks by
+closing its connection and reconnecting with a new `from`.
+
 Default pace is roughly 240 words/minute plus short phase/speaker pauses.
-`speed` is 0.5–4. Disconnecting cancels playback; there is no resume cursor.
+`speed` is 0.5–4 and, because it is just a query parameter on a fresh stream,
+can be changed mid-playback by reconnecting with `from=<current index>`.
+Disconnecting cancels playback; there is no resume cursor.
 Clients must close on `complete` or error to prevent EventSource's automatic
 reconnect from starting over. Streams respect network backpressure. No model
 calls, shell dispatch, seal-check execution, authentication, or write API exist.
