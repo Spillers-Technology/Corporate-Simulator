@@ -357,3 +357,32 @@ was actually CC0" if a YouTube Content ID system ever flags something incorrectl
   first-run experience — recommended yes, so `Corporate-Simulator`'s public GitHub Pages
   demo works for a visitor with zero setup, and live-generation mode is clearly gated
   behind "run this yourself and sign in."
+
+
+## 11. Replay MVP implementation notes — 2026-09-19
+
+The first milestone is read-only Node.js REST/SSE plus plain Canvas. Backend listens
+on `PORT=4000`, reads `DATA_DIR`, and frontend serves on port 3000 while proxying to
+`BACKEND_URL`. Replay streams saved words at approximately 240 words/minute (adjustable
+0.5–4×); it is labeled a recording everywhere. Six colored characters gather at the
+meeting table, with a gold human founder, draft-position indicators, Phase 4 vote tokens,
+and separate Phase 5 clerk narration. A full text transcript accompanies the canvas.
+
+For this milestone, user-directed scope supersedes the earlier real-fixture suggestion
+in §7: the only populated fixture is the wholly invented Cloudberry Cushion Club
+meeting in `backend/test-fixtures/synthetic-demo/`. `demo-data/` stays untouched until
+Joey supplies and approves a redaction. No private source data was read or copied.
+
+The parser accepts complete recordings only; it does not manage in-progress phase
+transitions or execute seal-check. Seat labels come from optional root `seats/` dossiers,
+optional draft `name` metadata, or generic seat numbers. Historic draft models are
+preserved. Timestamps order simulated drafts; the founder always precedes them.
+Recognized debate/vote Markdown patterns and fallback behavior are documented in
+`backend/README.md`; unspecified prose is preserved rather than attributed by guesswork.
+
+Live CLI/model dispatch, model configuration, login, human-input forms, transcription,
+cutout avatars, TTS, and audio assets are deferred. In particular, §9's sound cues are
+not included in this explicitly narrower milestone. Static Pages builds contain the UI
+only and report an unavailable backend honestly; a standalone public demo awaits its
+approved fixture and hosting work. The Compose defaults and reserved demo directory
+are unchanged; use the documented `DATA_DIR` override for the synthetic recording.
