@@ -276,6 +276,13 @@ spinner. Concretely:
 
 ## 6b. Persona avatars — South Park-style cutout animation
 
+**Art direction, stated plainly so it isn't lost before the art pass actually happens
+(2026-09-19):** Habbo Hotel-style bodies — chunky, blocky, charmingly low-fidelity
+isometric-ish figures — topped with the South Park-style cutout head (see below). Not
+a from-scratch character design; the body language is "classic Habbo avatar," the head
+technique is "flat image swapped onto a simple rig." Revisit this note when the actual
+character-art pass starts.
+
 **The animation technique itself:** yes, do this — a static head/face image composited
 onto a simple 2D-animated cutout body (limbs as separate flat pieces that rotate/tween
 around joints, à la South Park's construction-paper style) is cheap to build, easy to
@@ -460,3 +467,25 @@ exposing that structure, not inventing new structure.
   artifact reading — all untouched. This is additive to `replay.js`/`server.js` and the
   frontend only. Live-generation mode's own eventual "resume from where a real
   subprocess left off" question is a related but separate concern, not solved by this.
+
+**Addendum — timeline scrubber (2026-09-19, same design):** a replay's total event
+count is knowable ahead of time (the whole meeting already exists as finished text) —
+true only in replay mode, never in live-generation mode, where length isn't known until
+generation actually finishes. That makes a real drag-to-seek timeline slider a natural
+extra, not a separate mechanism: it's the same `toc`/`from=<event index>` machinery
+above, generalized from discrete jump targets to continuous position.
+
+- Slider range is `0..totalEvents` (the length of `recording(meeting)`'s event array,
+  already computed server-side when building `toc` — expose it as a `totalEvents`
+  field alongside `toc` in the metadata response).
+- Render the `toc` phase boundaries as tick marks/labels along the same slider, so it
+  reads as one unified control rather than a separate scrubber plus a separate phase
+  list — dragging *is* how you casually scrub, clicking a tick *is* how you jump to a
+  known phase, same widget.
+- Dragging previews position client-side only (no network call per pixel of drag);
+  releasing triggers exactly the same reconnect-with-`from=` used everywhere else in
+  this section.
+- **Explicitly does not apply to live-generation mode later** — there, total length is
+  unknown until the session actually finishes, so the equivalent control there is a
+  growing progress indicator with no fixed right edge, not a scrubber. Keep that UI
+  component distinct rather than trying to force a slider to cover both cases.
