@@ -2,6 +2,7 @@ import { DISPLAY_NAME, FLAVOR } from './config.js';
 import { applyEvent, initialState, speakerLabel } from './state.js';
 import { createScene } from './scene.js';
 import { currentTarget, nextPhase, nextSpeaker, offset } from './navigation.js';
+import { initCreate } from './create.js';
 
 const element = id => document.getElementById(id);
 document.title = `${DISPLAY_NAME} · Replay`;
@@ -218,6 +219,21 @@ element('stop').addEventListener('click', () => {
   element('status').textContent = 'Recording stopped. Play restarts it; the timeline and contents resume from anywhere.';
 });
 window.addEventListener('pagehide', disconnect);
+
+// Two modes that coexist: replaying finished meetings (read-only) and writing the two
+// human-authored phases of a new one. Switching panels never touches replay state.
+const MODES = { replay: ['REPLAY ONLY', 'Replay'], create: ['PHASE 0–1 HUMAN INPUT', 'New meeting'] };
+function setMode(mode) {
+  for (const name of Object.keys(MODES)) {
+    element(`${name}-mode`).hidden = name !== mode;
+    element(`mode-${name}`).setAttribute('aria-selected', String(name === mode));
+  }
+  element('mode-badge').textContent = MODES[mode][0];
+  document.title = `${DISPLAY_NAME} · ${MODES[mode][1]}`;
+}
+for (const mode of Object.keys(MODES)) element(`mode-${mode}`).addEventListener('click', () => setMode(mode));
+setMode('replay');
+initCreate();
 try {
   const { meetings, skipped } = await json('/api/meetings');
   element('meeting').replaceChildren();

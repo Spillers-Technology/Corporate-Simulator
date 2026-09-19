@@ -10,6 +10,7 @@ const assets = new Map([
   ['/src/scene.js', ['src/scene.js', 'text/javascript']],
   ['/src/state.js', ['src/state.js', 'text/javascript']],
   ['/src/navigation.js', ['src/navigation.js', 'text/javascript']],
+  ['/src/create.js', ['src/create.js', 'text/javascript']],
   ['/src/config.js', ['src/config.js', 'text/javascript']],
   ['/src/style.css', ['src/style.css', 'text/css']]
 ]);
@@ -17,10 +18,19 @@ export function createServer({ backendUrl = 'http://localhost:4000', root = new 
   const backend = new URL(backendUrl);
   if (!['http:', 'https:'].includes(backend.protocol)) throw new Error('BACKEND_URL must be HTTP(S).');
   return http.createServer(async (request, response) => {
-    if (request.method !== 'GET') { response.writeHead(405); response.end('Only GET is supported.'); return; }
-    if (request.url.startsWith('/api/')) {
+    // GET everywhere, plus POST to the API for the Phase 0/1 human-input routes the
+    // backend now exposes. Static assets stay GET-only.
+    const api = request.url.startsWith('/api/');
+    if (request.method !== 'GET' && !(api && request.method === 'POST')) {
+      response.writeHead(405); response.end('Only GET, and POST to the API, are supported.'); return;
+    }
+    if (api) {
       const transport = backend.protocol === 'https:' ? https : http;
-      const upstream = transport.request(new URL(request.url, backend), { method: 'GET' }, incoming => {
+      const headers = {};
+      for (const name of ['content-type', 'content-length']) {
+        if (request.headers[name]) headers[name] = request.headers[name];
+      }
+      const upstream = transport.request(new URL(request.url, backend), { method: request.method, headers }, incoming => {
         response.writeHead(incoming.statusCode, incoming.headers);
         incoming.on('error', () => response.destroy());
         incoming.pipe(response);
@@ -32,7 +42,8 @@ export function createServer({ backendUrl = 'http://localhost:4000', root = new 
         } else response.destroy();
       });
       response.on('close', () => upstream.destroy());
-      upstream.end();
+      if (request.method === 'POST') { request.on('error', () => upstream.destroy()); request.pipe(upstream); }
+      else upstream.end();
       return;
     }
     const asset = assets.get(new URL(request.url, 'http://localhost').pathname);

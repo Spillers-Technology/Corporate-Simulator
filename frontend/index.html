@@ -11,8 +11,14 @@
   <main>
     <header>
       <div><p class="eyebrow">THE OFFICE IS IN SESSION</p><h1 id="brand">Meeting replay</h1></div>
-      <span class="badge">REPLAY ONLY</span>
+      <span class="badge" id="mode-badge">REPLAY ONLY</span>
     </header>
+    <div class="modes" role="tablist" aria-label="Mode">
+      <button id="mode-replay" class="mode" type="button" role="tab" aria-selected="true" aria-controls="replay-mode">Replay a meeting</button>
+      <button id="mode-create" class="mode" type="button" role="tab" aria-selected="false" aria-controls="create-mode">New meeting</button>
+    </div>
+
+    <section id="replay-mode" role="tabpanel" aria-labelledby="mode-replay">
     <p class="intro">One room. Six opinions. An ambitious amount of alignment. Watch a saved meeting unfold.</p>
     <form id="controls">
       <label>Recording <select id="meeting" disabled><option>Loading recordings…</option></select></label>
@@ -47,7 +53,75 @@
       <div id="history"></div>
       <article id="current"><h3 id="speaker">Meeting record</h3><pre id="speech">Select a recording to take a seat.</pre></article>
     </section>
-    <footer><strong>Live generation: not implemented.</strong> Model configuration and CLI sign-in are planned for a later milestone. All text here comes from saved files.</footer>
+    </section>
+
+    <section id="create-mode" role="tabpanel" aria-labelledby="mode-create" hidden>
+      <p class="intro">Phases 0 and 1 are human input, not simulation. Typing here writes nothing.
+        Each form is written into the data directory, and committed with git, only when you press its
+        <strong>Seal &amp; Commit</strong> button — and once sealed, it cannot be edited from here.</p>
+
+      <form id="motion-form" class="stack">
+        <div class="stack-head">
+          <h2>Phase 0 · Motion</h2>
+          <span class="badge" id="motion-seal">DRAFT · NOTHING WRITTEN YET</span>
+        </div>
+        <label>Title <input id="motion-title" type="text" maxlength="200" autocomplete="off"
+          placeholder="What is being decided, in one line"></label>
+        <label>Decision <textarea id="motion-decision" rows="7" placeholder="What exactly the board is being asked to authorize — and what it is explicitly not."></textarea></label>
+        <label>Cost <textarea id="motion-cost" rows="4" placeholder="External spend, operator hours, standing obligations, real exposure."></textarea></label>
+        <label>Deadline <textarea id="motion-deadline" rows="3" placeholder="A real deadline, or none forced — plus any revisit trigger."></textarea></label>
+        <label>Links <textarea id="motion-links" rows="3" placeholder="Prior decisions and records this motion depends on."></textarea></label>
+        <div class="preview">
+          <h3><span id="motion-preview-label">Will be written as</span> <code>00-motion.md</code></h3>
+          <pre id="motion-preview"></pre>
+          <p class="muted" id="motion-target"></p>
+        </div>
+        <button id="motion-commit" type="submit">Seal &amp; Commit motion</button>
+        <p id="motion-status" class="muted" role="status">Nothing has been written. Sealing creates the meeting directory and commits the motion.</p>
+      </form>
+
+      <form id="founder-form" class="stack" hidden>
+        <div class="stack-head">
+          <h2>Phase 1 · Founder draft</h2>
+          <span class="badge" id="founder-seal">DRAFT · NOTHING WRITTEN YET</span>
+        </div>
+        <p class="muted">The founder's own position, written by a human and recorded as such:
+          <code>model: n/a — not simulated</code>. No model produces any part of this.</p>
+        <label>Name <input id="founder-name" type="text" maxlength="120" autocomplete="off" placeholder="Who is writing this"></label>
+        <label>Position <select id="founder-position">
+          <option value="support">support</option>
+          <option value="support-with-conditions">support-with-conditions</option>
+          <option value="oppose">oppose</option>
+          <option value="abstain">abstain</option>
+        </select></label>
+        <label>Summary <textarea id="founder-summary" rows="5" placeholder="The position in a few sentences."></textarea></label>
+        <label>Argument <textarea id="founder-argument" rows="8" placeholder="Why — the actual reasoning, including the parts that are inconvenient."></textarea></label>
+        <label>Cost I see <textarea id="founder-cost" rows="4" placeholder="The cost as the founder honestly sees it."></textarea></label>
+        <label>What would change my mind <textarea id="founder-changeMind" rows="4" placeholder="Concretely: what evidence would move this position."></textarea></label>
+        <label>Prediction <textarea id="founder-prediction" rows="4" placeholder="A falsifiable prediction, with a date if there is one."></textarea></label>
+        <div class="preview">
+          <h3><span id="founder-preview-label">Will be written as</span> <code>drafts/01-founder.md</code></h3>
+          <pre id="founder-preview"></pre>
+        </div>
+        <button id="founder-commit" type="submit">Seal &amp; Commit founder draft</button>
+        <p id="founder-status" class="muted" role="status">Seal the motion first.</p>
+      </form>
+
+      <section id="phase2-note" class="note" hidden>
+        <h2>Sealed through Phase 1</h2>
+        <p>This meeting is sealed through Phase 1; live seat generation isn't implemented yet in
+          this build. Phase 2 (dispatching the simulated seats), and Phases 3–6 after it, are not
+          running, not queued, and not waiting on anything here — they simply do not exist yet.</p>
+        <p class="muted">The motion and founder draft are real files, committed to the data
+          directory's git repository. A meeting only becomes replayable once all six drafts and the
+          later phase files exist, so this one will not appear in the replay list yet.</p>
+      </section>
+    </section>
+
+    <footer><strong>Live generation: not implemented.</strong> Phases 0 and 1 are human input —
+      sealing them writes real files into the mounted data directory and commits them. Simulated
+      seats (Phase 2 onward), model configuration, and CLI sign-in are planned for a later
+      milestone and do not run in this build. Everything replayed here comes from saved files.</footer>
   </main>
 </body>
 </html>

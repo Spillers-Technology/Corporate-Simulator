@@ -125,14 +125,24 @@ export function votesFrom(text, seats) {
   return votes;
 }
 
+// Where meetings live under a mounted root: a root that is itself one meeting, else a
+// `meetings/` subdirectory if present, else flat at the root. One definition, shared by
+// lookup (meetingLocation), listing (listMeetings) and the write path, so a newly
+// created meeting lands exactly where an existing one would be found.
+export async function collectionBase(root) {
+  if (await exists(path.join(root, '00-motion.md'))) return { base: root, single: true };
+  try {
+    if ((await stat(path.join(root, 'meetings'))).isDirectory()) return { base: path.join(root, 'meetings'), single: false };
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  return { base: root, single: false };
+}
+
+export const MEETING_ID = /^[\w-]+$/;
+
 export async function meetingLocation(root, id) {
   if (id === '_root') return inside(root, root);
-  if (!/^[\w-]+$/.test(id)) throw new MeetingError('Invalid meeting ID.', 400);
-  const base = await exists(path.join(root, '00-motion.md')) ? root :
-    await stat(path.join(root, 'meetings')).then(s => s.isDirectory() ? path.join(root, 'meetings') : root).catch(e => {
-      if (e.code === 'ENOENT') return root;
-      throw e;
-    });
+  if (!MEETING_ID.test(id)) throw new MeetingError('Invalid meeting ID.', 400);
+  const { base } = await collectionBase(root);
   return inside(root, path.join(base, id));
 }
 
@@ -188,15 +198,10 @@ export async function parseMeeting(root, id) {
 }
 
 export async function listMeetings(root) {
-  let ids;
-  if (await exists(path.join(root, '00-motion.md'))) ids = ['_root'];
-  else {
-    let base = root;
-    try { if ((await stat(path.join(root, 'meetings'))).isDirectory()) base = path.join(root, 'meetings'); }
-    catch (error) { if (error.code !== 'ENOENT') throw error; }
-    ids = (await readdir(await inside(root, base), { withFileTypes: true }))
-      .filter(entry => entry.isDirectory() && /^[\w-]+$/.test(entry.name)).map(entry => entry.name).sort();
-  }
+  const { base, single } = await collectionBase(root);
+  const ids = single ? ['_root']
+    : (await readdir(await inside(root, base), { withFileTypes: true }))
+      .filter(entry => entry.isDirectory() && MEETING_ID.test(entry.name)).map(entry => entry.name).sort();
   const meetings = [], skipped = [];
   for (const id of ids) {
     try {

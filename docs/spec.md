@@ -545,6 +545,37 @@ path must reuse `backend/src/parser.js`'s existing `inside()` containment helper
 than re-deriving path-safety logic — the same "stays inside DATA_DIR" guarantee reads
 already enforce, now required for writes too.
 
+**13a implementation notes (2026-09-19, as built).** Decisions the implementation made
+that this section had left open, recorded here because this spec is living documentation:
+
+- The meeting ID is `<date>-<slug>`, the slug derived from the motion's own title
+  (kebab-cased, truncated to 60 characters, always a single segment matching the
+  `[\w-]+` ID pattern `parser.js` already validates). A caller may pass an explicit
+  slug; it is sanitized by the same rule rather than trusted as a path.
+- Where a new meeting lands is not re-derived: `parser.js` now exports `collectionBase()`,
+  used by lookup, listing and the write path alike, so a created meeting lands exactly
+  where an existing one would be found. The writer asserts this after `mkdir` by
+  re-resolving the ID through `meetingLocation()`.
+- Containment reuses `inside()` as this section requires. Because `inside()` realpaths
+  its candidate it cannot vet a not-yet-created file, so the pattern is: contain the
+  parent (which exists), append one validated segment, then create with `O_EXCL` — which
+  never follows a symlink and never overwrites, making the seal a syscall guarantee
+  rather than only a check.
+- Sealing is checked against both the filesystem and git history: a committed file that
+  was later deleted from the working tree is still sealed (409).
+- Ordering is enforced rather than assumed — the founder draft is refused unless
+  `00-motion.md` exists, is non-empty, and is **already committed**.
+- `DATA_DIR` may be a subdirectory of the repository (Joey's own `board/` inside
+  `corporate-strategy` is exactly that), so the repository root is resolved with
+  `git rev-parse --show-toplevel` run in `DATA_DIR`. Commits are pathspec-scoped to the
+  files just written, so unrelated staged changes in a real repository are never swept
+  in, and they use that repository's own configured identity. A `DATA_DIR` that is not
+  in a repository fails before anything is written; a failed commit rolls back the files
+  this write created.
+- A motion-only meeting is deliberately not replayable — `listMeetings` reports it under
+  `skipped`, which is correct: it is not a finished six-seat meeting and the UI says so
+  instead of implying Phase 2 is on its way.
+
 ### 13b. A single live seat, proof of concept
 
 Not five seats, not six — **one.** After Phase 0/1 are sealed, offer to dispatch exactly

@@ -4,6 +4,103 @@ Per-round implementation log: what was asked, what an adversarial review pass fo
 what got fixed, how it was independently verified. Same convention as SpoolSmith's
 `docs/dev-process.md` — see `CONTRIBUTING.md` for the practice this file records.
 
+## 2026-09-19 — Live generation slice 1a: Phase 0/1 human-input forms and the first writes
+
+Requested per `docs/spec.md` §13a — **13a only**; §13b (a single live seat) and §13c
+(everything past it) were read for context and deliberately not built. This is the first
+time this app writes anything to `DATA_DIR`, so the work was kept narrow on purpose.
+
+What was built:
+- `backend/src/meeting-writer.js`. Scaffolds `<date>-<slug>/drafts`, writes
+  `00-motion.md` (`## Decision` / `## Cost` / `## Deadline` / `## Links`, matching the
+  real `corporate-strategy` motions this repo already parses) and then
+  `drafts/01-founder.md` (`seat: 01-founder`, `model: n/a — not simulated`, a real
+  `generated` timestamp, and RULES §6's POSITION / SUMMARY / ARGUMENT / COST I SEE /
+  WHAT WOULD CHANGE MY MIND / PREDICTION sections), and commits each with a real
+  `git add` + `git commit`.
+- `POST /api/meetings` and `POST /api/meetings/:id/founder-draft` in `server.js`; every
+  other verb and route stays exactly as read-only as it was.
+- A "New meeting" mode in the frontend beside replay: live markdown preview, one
+  explicit **Seal & Commit** per form, sealed-means-sealed afterwards, and an honest
+  end state ("sealed through Phase 1; live seat generation isn't implemented yet").
+- `docker-compose.yml`'s `DATA_DIR` mount dropped `:ro`, with the comment rewritten —
+  "don't ship real private data" still applies, "read-only" no longer does.
+
+Decisions worth recording:
+- Containment reuses `parser.js`'s `inside()` rather than a second notion of path
+  safety, as §13a requires. `inside()` realpaths its candidate and so cannot vet a file
+  that does not exist yet; the pattern used is "contain the parent, append one validated
+  segment," backed by an `O_EXCL` create that never follows a symlink and never
+  overwrites. `parser.js` also gained an extracted `collectionBase()` so lookup, listing
+  and writing share one definition of where meetings live — the writer asserts, after
+  `mkdir`, that the new directory is exactly what `meetingLocation()` resolves the ID to.
+- Sealing checks git history as well as the filesystem, so a committed-then-deleted file
+  is still sealed. Ordering is enforced, not assumed: the founder draft is refused unless
+  the motion exists, is non-empty, and is already committed.
+- `git rev-parse --show-toplevel` is run with `cwd: DATA_DIR` because `DATA_DIR` is
+  usually a subdirectory of the repository, not its root. Commits are pathspec-scoped so
+  unrelated staged work in a real repository is never swept into a meeting commit, and a
+  non-repository `DATA_DIR` fails before anything is written.
+
+Verification (what was actually run, not what was assumed):
+- `npm run lint`, `npm run build`, `npm test` in both packages: backend 23 tests
+  (9 new in `backend/test/human-input.test.js`), frontend 7 tests (3 new). All green.
+- **No test writes outside its own disposable fixture.** Every test in
+  `human-input.test.js` creates its own `mkdtemp` directory, runs `git init` inside it,
+  and removes it in `t.after` — same convention as `replay.test.js`'s `copy(t)`. No test
+  touches `corporate-strategy`, `demo-data/`, the synthetic fixture, or any path outside
+  the tmpdir it created.
+- Real end-to-end run in headless Chromium against a real backend and frontend pointed
+  at a throwaway `git init` directory in the session scratchpad (never real board data):
+  mode switching, live preview, motion seal, fields going read-only with the commit
+  button removed, founder form appearing only after the motion is sealed, founder seal,
+  the Phase 2 honesty note, zero page errors. The resulting directory was inspected
+  directly: two real commits, clean `git status`, and the exact file shapes above.
+- Two real bugs found by that browser pass and fixed, not filed: `form.stack`'s
+  `display: block` outranked `[hidden]`, so the founder form was visible before the
+  motion was sealed (fixed with an explicit `[hidden] { display: none !important }`);
+  and the sealed badge, which carries the full meeting ID, overflowed the viewport at
+  390 px because `.badge` is `white-space: nowrap` (fixed for the stacked forms only).
+- The 409 paths were exercised in the browser too, not only in tests: re-sealing an
+  already-sealed motion reports "Nothing was written," leaves the form editable and
+  retryable, and does not alter the committed file.
+- Replay mode was re-checked in the browser after the markup restructuring: loads the
+  synthetic recording, plays, seeks via next-phase, stops, transcript intact, zero page
+  errors.
+
+Not done, deliberately: no seat dispatch, no model subprocess, no model-configuration
+console, no CLI sign-in, no avatars, no sound (§13b/§13c). No adversarial-review pass by
+astra this round — Codex is still rate-limited per §13's own note; the orchestrator
+session re-verifies this work independently before merging.
+
+### 2026-09-19 — Orchestrator verification of the above
+
+Re-ran `lint`/`build`/`test` independently in both packages (23/23 backend, 7/7
+frontend, clean) and read `meeting-writer.js` and the `server.js`/`parser.js` diffs in
+full, not just the implementer's summary. The design holds up: `O_EXCL` as the real
+seal guarantee, `inside()` reused rather than re-derived, pathspec-scoped commits,
+preflight-before-any-write ordering.
+
+**One real finding, confirmed empirically, not just in theory:** two concurrent
+`createMeeting` calls for the *same* meeting ID race. Reproduced directly — fired two
+`Promise.allSettled` calls at once against a throwaway `git init` repo — and the
+second request's rollback deleted the first request's already-written file before its
+`git commit` completed. Failure mode is safe, not silent corruption: **both** requests
+end up rejected and the repository is left clean (no orphaned or half-committed
+state) — but a request that should have succeeded didn't, with a confusing error
+("Could not commit the sealed meeting: On branch main..."). Checked whether the
+frontend can actually trigger this: `create.js` disables the commit button
+synchronously before the request goes out, so a normal single click cannot reach this
+window — it needs two truly concurrent requests (two tabs, a raw API client, or a
+deliberate test, as above). **Documented as a known limitation, not fixed this
+round:** a correct fix needs a real per-meeting-ID lock (or a compare-and-swap on the
+directory's existence at creation time), which is more surface than this narrowly-
+scoped slice should absorb; tracked here so it isn't rediscovered as a surprise.
+
+Verified the browser-tested `demo-data/`/`corporate-strategy` boundary held: this
+orchestrator's own race-condition test ran only against `/tmp/cs-race-test` (a
+disposable `git init` directory created and used for nothing else), never real data.
+
 ## 2026-09-19 — Replay navigation: table of contents, timeline scrubber, fast-forward
 
 Requested per `docs/spec.md` §12 after watching v0.1.0 replay real `corporate-strategy`

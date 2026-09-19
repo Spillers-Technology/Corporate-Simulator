@@ -157,7 +157,10 @@ test('REST and SSE return metadata, all events and errors without private paths'
   assert.equal((await fetch(`${base}/api/meetings/%2e%2e%2fescape`)).status, 400);
   assert.equal((await fetch(`${base}/api/meetings/%ZZ`)).status, 400);
   assert.equal((await fetch(`${base}/api/meetings/missing`)).status, 404);
-  assert.equal((await fetch(`${base}/api/meetings`, { method: 'POST' })).status, 405);
+  // POST /api/meetings is now the Phase 0 human-input route (see human-input.test.js);
+  // every other verb, and every other route, stays read-only.
+  assert.equal((await fetch(`${base}/api/meetings`, { method: 'PUT' })).status, 405);
+  assert.equal((await fetch(`${base}/api/meetings/_root`, { method: 'POST' })).status, 405);
 });
 test('SSE advances over time and a disconnected replay leaves server responsive', async t => {
   const base = await server(t, { tickMs: 10 });

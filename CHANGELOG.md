@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+- Live generation, slice 1a (`docs/spec.md` §13a): human-input forms for Phase 0 (the
+  motion) and Phase 1 (the founder draft). A "New meeting" mode alongside replay, with
+  a live preview of the exact markdown that will be written, an explicit **Seal &
+  Commit** step that is the only thing that writes anything, and sealed-means-sealed
+  behavior afterwards — fields go read-only and the commit button is removed.
+- Backend `meeting-writer.js` plus `POST /api/meetings` and
+  `POST /api/meetings/:id/founder-draft`: scaffold `<date>-<slug>/drafts`, write
+  `00-motion.md` then `drafts/01-founder.md` in that order, and commit each with a real
+  pathspec-scoped `git add` + `git commit` in whatever repository contains `DATA_DIR`.
+  The founder draft is refused unless the motion already exists, is non-empty, and is
+  already committed; a motion or founder draft that exists on disk or in git history is
+  never rewritten (409).
+
+### Changed
+- `DATA_DIR` is now read-write: `docker-compose.yml` drops the `:ro` mount suffix.
+  "Never ship real private data in this repo" still applies; the read-only rationale no
+  longer does. Writes are contained to `DATA_DIR` by the same `inside()` helper replay
+  reads already use, and created with `O_EXCL` so a pre-placed symlink is never written
+  through.
+- The frontend proxy forwards `POST` to `/api/*` (static assets stay `GET`-only), and
+  the page states plainly that a meeting sealed here stops at Phase 1 because live seat
+  generation is not implemented in this build.
+
 ## [0.2.0] - 2026-09-19
 
 ### Added

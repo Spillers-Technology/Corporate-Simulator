@@ -7,11 +7,16 @@ npm --prefix backend ci
 DATA_DIR="$PWD/backend/test-fixtures" npm --prefix backend start
 ```
 
-The API listens on `PORT` (default `4000`). `DATA_DIR` is a read-only meeting
-root: a single meeting directory, a collection of meeting directories, or a
-board directory containing `meetings/` and optional `seats/` dossiers. With no
+The API listens on `PORT` (default `4000`). `DATA_DIR` is a meeting root: a
+single meeting directory, a collection of meeting directories, or a board
+directory containing `meetings/` and optional `seats/` dossiers. With no
 configuration it uses `../demo-data` relative to the working directory; that
-reserved directory currently has no approved recording. No files are written.
+reserved directory currently has no approved recording.
+
+Replay reads only. The two Phase 0/1 human-input routes below are the only code
+that writes: they create one `<date>-<slug>/` meeting directory under the same
+root replay reads from, write `00-motion.md` and `drafts/01-founder.md`, and
+commit them with `git`. Nothing else in `DATA_DIR` is ever modified.
 
 ```bash
 curl http://localhost:4000/api/meetings
@@ -52,10 +57,32 @@ that resolve outside `DATA_DIR` and traversal IDs are rejected.
 
 ## REST / SSE contract
 
-- `GET /api/health`: service status and `mode: replay`.
+- `GET /api/health`: service status, `mode: replay`, `humanInput: true`, `liveSeats: false`.
 - `GET /api/meetings`: `{ meetings: [{ id, title }], skipped: [{ id, reason }] }`.
 - `GET /api/meetings/:id`: recording metadata, six seats, `toc`, `totalEvents`.
 - `GET /api/meetings/:id/events?speed=1&from=0`: fresh independent replay stream.
+- `POST /api/meetings`: Phase 0. JSON `{ title, decision, cost, deadline, links, slug?, date? }`.
+  Creates `<date>-<slug>/drafts`, writes `00-motion.md` (`## Decision` / `## Cost` /
+  `## Deadline` / `## Links`), commits it, returns `201 { id, title, sealed }`.
+- `POST /api/meetings/:id/founder-draft`: Phase 1. JSON `{ name, position, summary,
+  argument, cost, changeMind, prediction, context? }`. Writes and commits
+  `drafts/01-founder.md` with `seat: 01-founder`, `model: n/a — not simulated` and a
+  real `generated` timestamp. Returns `201 { id, sealed }`.
+
+Both write routes are staged and explicit: nothing reaches `DATA_DIR` until the
+POST. Ordering is enforced, not assumed — the founder draft is refused (409) unless
+`00-motion.md` already exists, is non-empty, and is already committed. Once written
+and committed, a motion or founder draft is sealed: a second write is refused with
+409, whether the file is still on disk or only in git history. Writes are contained
+to `DATA_DIR` by `parser.js`'s own `inside()` helper, created with `O_EXCL` so a
+pre-placed symlink is never written through, and rolled back if the commit fails.
+Errors are `400` (malformed input), `404` (no such meeting), `409` (sealed, or out of
+order) and `500`; no error body contains a filesystem path.
+
+`DATA_DIR` must be inside a git repository — it may be a subdirectory of one, not
+its root — or sealing fails before anything is written. Commits are pathspec-scoped
+to the files just written, so unrelated staged changes in that repository are never
+swept in, and they use that repository's own configured identity.
 
 SSE event names and JSON `type` agree: `phase`, `speech-start`, `text`,
 `speech-end`, `vote`, `complete`. Every event carries a stable, monotonic
@@ -89,6 +116,8 @@ can be changed mid-playback by reconnecting with `from=<current index>`.
 Disconnecting cancels playback; there is no resume cursor.
 Clients must close on `complete` or error to prevent EventSource's automatic
 reconnect from starting over. Streams respect network backpressure. No model
-calls, shell dispatch, seal-check execution, authentication, or write API exist.
-The mounted directory is made available to users who can access this local
-service; it is not a public authenticated hosting service.
+calls, live seat dispatch, or authentication exist; the only shell execution is
+the `git add`/`git commit` the two write routes run. The mounted directory is
+made available — now for reading and for the Phase 0/1 writes above — to users
+who can access this local service; it is not a public authenticated hosting
+service.

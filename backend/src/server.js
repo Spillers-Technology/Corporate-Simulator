@@ -2,7 +2,26 @@ import http from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { listMeetings, MeetingError, parseMeeting } from './parser.js';
+import { createMeeting, writeFounderDraft } from './meeting-writer.js';
 import { navigation, streamReplay } from './replay.js';
+
+const MAX_BODY = 512 * 1024;
+// Phase 0/1 human input is the only write surface; everything else stays GET-only.
+async function readJson(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > MAX_BODY) throw new MeetingError('Request body is too large.', 400);
+    chunks.push(chunk);
+  }
+  if (!size) throw new MeetingError('A JSON body is required.', 400);
+  try {
+    const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('not an object');
+    return body;
+  } catch { throw new MeetingError('Request body must be a JSON object.', 400); }
+}
 
 export function createServer({ dataDir, tickMs = 250 }) {
   return http.createServer(async (request, response) => {
@@ -13,8 +32,20 @@ export function createServer({ dataDir, tickMs = 250 }) {
     };
     try {
       const url = new URL(request.url, 'http://localhost');
-      if (request.method !== 'GET') return json(405, { error: 'Only GET is supported in replay mode.' });
-      if (url.pathname === '/api/health') return json(200, { status: 'ok', mode: 'replay' });
+      if (request.method === 'POST') {
+        // Phase 0: create a meeting from a motion. Nothing before this writes anything.
+        if (url.pathname === '/api/meetings') {
+          return json(201, await createMeeting(dataDir, await readJson(request)));
+        }
+        // Phase 1: seal the founder draft of an already-created, motion-only meeting.
+        const founder = url.pathname.match(/^\/api\/meetings\/([^/]+)\/founder-draft$/);
+        if (founder) {
+          return json(201, await writeFounderDraft(dataDir, decodeURIComponent(founder[1]), await readJson(request)));
+        }
+        return json(405, { error: 'Only the Phase 0 and Phase 1 human-input routes accept POST.' });
+      }
+      if (request.method !== 'GET') return json(405, { error: 'Only GET and the human-input POST routes are supported.' });
+      if (url.pathname === '/api/health') return json(200, { status: 'ok', mode: 'replay', humanInput: true, liveSeats: false });
       if (url.pathname === '/api/meetings') return json(200, await listMeetings(dataDir));
       const match = url.pathname.match(/^\/api\/meetings\/([^/]+)(\/events)?$/);
       if (!match) return json(404, { error: 'Route not found.' });
