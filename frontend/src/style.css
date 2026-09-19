@@ -1,0 +1,31 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; color: #e8e8de; background: #111b24; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1164px; padding: 36px 32px; margin: auto; }
+header, .status-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+h1 { font-size: clamp(24px, 4vw, 38px); margin: 5px 0; letter-spacing: -1px; }
+.eyebrow { color: #a2c6bb; font-size: 11px; letter-spacing: 3px; }
+.badge { border: 1px solid #abc9ad; color: #cce5c7; font-size: 11px; letter-spacing: 2px; padding: 9px 12px; white-space: nowrap; border-radius: 4px; }
+.intro, .muted, footer { color: #a7b5bc; }
+form { display: flex; gap: 16px; align-items: end; background: #1c2a34; padding: 20px; margin-top: 26px; border-radius: 10px; flex-wrap: wrap; }
+label { display: grid; gap: 8px; font-size: 12px; color: #bfd0d6; }
+label:first-child { flex: 1; min-width: 200px; }
+select, button { font: inherit; font-size: 14px; min-height: 42px; border-radius: 5px; border: 1px solid #536370; padding: 8px 12px; }
+select { background: #111b24; color: #e8e8de; max-width: 100%; }
+button { background: #d9f097; color: #1b2a24; font-weight: 700; cursor: pointer; }
+#stop { background: transparent; color: #e8e8de; }
+:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid #f4bd65; outline-offset: 4px; }
+.status-row { font-size: 13px; min-height: 60px; }
+#phase { color: #d9f097; text-align: right; }
+canvas { display: block; width: 100%; height: auto; border: 1px solid #50616a; border-radius: 12px; }
+.flavor { font-size: 13px; color: #b0c895; text-align: center; min-height: 20px; }
+.transcript { margin-top: 30px; border-top: 1px solid #384751; }
+h2 { font-size: 20px; }
+h3 { font-size: 14px; color: #d5e4af; }
+pre { font: 15px/1.7 system-ui, sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+article { border-left: 3px solid #596b74; padding: 4px 18px; margin: 16px 0; }
+article.clerk { border-color: #d3b7ed; background: #282738; }
+.muted, footer { font-size: 13px; line-height: 1.7; }
+footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid #384751; }
+@media (max-width: 600px) { main { padding: 20px 12px; } header { flex-wrap: wrap; } form { padding: 14px; } .status-row { align-items: start; } }
