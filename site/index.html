@@ -70,7 +70,7 @@
 </head>
 <body>
 <main>
-  <span class="status">v0.1.0 — replay mode, self-hosted</span>
+  <span class="status">v0.3.0 — replay navigation + live-generation writes, self-hosted</span>
   <h1>Corporate-Simulator</h1>
   <p class="tagline">A tiny animated office where a fixed cast of simulated board members
   argue over your decisions — for real.</p>
@@ -93,7 +93,7 @@ BACKEND_URL=http://localhost:4000 npm --prefix frontend start
     instead of the bundled synthetic fixture — see the README for the full shape.</p>
     <ul>
       <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator">Source on GitHub</a></li>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/releases/tag/v0.1.0">v0.1.0 release</a></li>
+      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/releases/tag/v0.3.0">v0.3.0 release</a></li>
       <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/docs/spec.md">Design spec</a></li>
       <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Full self-hosting instructions</a></li>
     </ul>
@@ -104,9 +104,15 @@ BACKEND_URL=http://localhost:4000 npm --prefix frontend start
     sealed founder position, isolated reviewer drafts, debate, vote, decision record) and
     watch it play out — six seats, a distinctly-rendered human founder, progressive
     speech, vote gestures, a separate non-binding clerk pass.</p>
+    <p>A table of contents (every phase, plus each independent reviewer's own draft)
+    lets you jump straight to any point instead of only watching start to finish; a
+    drag-to-seek timeline slider shows the same structure as tick marks; and the reading
+    speed is changeable mid-playback — pick a faster pace and that's fast-forward, no
+    separate control needed.</p>
     <p>A locally-run instance can also write the two human-authored phases of a new
     meeting — the motion and the founder draft — into its own data directory and commit
-    them, behind an explicit seal-and-commit step.</p>
+    them for real, behind an explicit seal-and-commit step. Once sealed, a phase is
+    locked; nothing here silently rewrites institutional history.</p>
     <p><strong>Not built yet:</strong> live seat generation (actually dispatching models
     to argue a new motion), the model-configuration console, CLI sign-in, avatars,
     sound. Watch the repo for those.</p>
