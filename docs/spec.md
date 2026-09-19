@@ -416,3 +416,41 @@ not included in this explicitly narrower milestone. Static Pages builds contain 
 only and report an unavailable backend honestly; a standalone public demo awaits its
 approved fixture and hosting work. The Compose defaults and reserved demo directory
 are unchanged; use the documented `DATA_DIR` override for the synthetic recording.
+
+## 12. Replay navigation: table of contents + fast-forward (2026-09-19)
+
+Requested after actually watching v0.1.0 replay real `corporate-strategy` meetings:
+seeking around and speeding up. The meeting-directory convention already gives us the
+seams to navigate on (phases, and within Phase 2, individual seats) — this is about
+exposing that structure, not inventing new structure.
+
+**Design, one mechanism covers both asks:**
+
+- `recording()`'s flat event sequence (already the single source of truth for what gets
+  streamed) gets a stable, monotonic event index. The REST metadata endpoint
+  (`GET /api/meetings/:id`) gains a `toc` field: one entry per phase (`phase`, `label`,
+  `startEvent`), and Phase 2's entry additionally lists each seat's own `startEvent`
+  (`seat`, `name`, `startEvent`) since that's the one phase with real sub-navigable
+  structure (five independent, unordered speakers).
+- The SSE endpoint (`GET /api/meetings/:id/events`) gains an optional `from=<event
+  index>` param. Events before that index are still emitted (client state — transcript,
+  vote tally, current speaker — must build up the same way it would have from a normal
+  play-through) but with **zero delay**, then normal `tickMs`/`speed`-paced streaming
+  resumes at the requested index. No new client-side replay logic to keep in sync with
+  the server's own event semantics — the same event stream, just time-compressed up to
+  a point.
+- **Table-of-contents navigation:** frontend renders the `toc` (phases as top-level
+  entries, Phase 2 expanded to its five seats) as a clickable sidebar/list. Clicking an
+  entry tears down the current SSE connection and reconnects with `from=<that entry's
+  startEvent>`.
+- **Fast-forward:** the existing speed control (0.5–4×, previously choosable only
+  before pressing play) becomes changeable *during* playback too, using the exact same
+  mechanism — reconnect with `from=<current event index>&speed=<new speed>`. No
+  separate "hold to fast-forward" input needed; picking 4× mid-playback already is
+  fast-forward. A literal "skip to next phase" / "skip to next speaker" button is a
+  cheap, natural add-on once TOC entries and their event indices exist, and worth
+  including in the same pass.
+- **What this explicitly doesn't change:** parsing, security/containment logic,
+  artifact reading — all untouched. This is additive to `replay.js`/`server.js` and the
+  frontend only. Live-generation mode's own eventual "resume from where a real
+  subprocess left off" question is a related but separate concern, not solved by this.
