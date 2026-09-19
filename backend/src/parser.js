@@ -28,13 +28,44 @@ async function exists(file) {
     throw error;
   }
 }
+// Known real-world drafts (this repo's own DR-0005 founder draft, and the pattern it
+// established, both real precedent \u2014 not a hypothetical) embed a free-text "provenance
+// note" paragraph *inside* the frontmatter delimiters, alongside the actual key: value
+// header fields. That block is not valid YAML (a bare prose paragraph after a blank
+// line breaks plain-scalar folding), but the header fields around it are still exactly
+// what's needed. Try a strict parse first; only fall back to pulling just the known
+// fields by line when strict parsing fails, so a well-formed file's untouched by this
+// at all and only the tolerant path pays for the leniency.
+const KNOWN_FIELDS = ['seat', 'name', 'model', 'context', 'lens', 'generated'];
+function lenientFrontmatter(block) {
+  const data = {};
+  for (const line of block.split('\n')) {
+    const field = line.match(/^(seat|name|model|context|lens|generated):\s*(.*)$/);
+    if (!field || !KNOWN_FIELDS.includes(field[1])) continue;
+    // Validate the line as YAML in isolation before trusting it — this is what tells
+    // a real header field ("seat: 01-founder") apart from a line that merely LOOKS
+    // like one but is actually broken/truncated YAML syntax ("seat: [", an unclosed
+    // flow collection) that happens to sit inside the same malformed block.
+    let parsed;
+    try { parsed = parseYaml(line); } catch { continue; }
+    const value = parsed?.[field[1]];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      data[field[1]] = String(value);
+    }
+  }
+  return data;
+}
 export function frontmatter(text) {
   const match = text.match(/^\uFEFF?---\n([\s\S]*?)\n---(?:\n|$)/);
   if (!match) throw new MeetingError('Draft or roster file needs YAML frontmatter.');
   let data;
-  try { data = parseYaml(match[1], { maxAliasCount: 10 }); }
-  catch { throw new MeetingError('Invalid YAML frontmatter.'); }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new MeetingError('Frontmatter must be a mapping.');
+  try {
+    data = parseYaml(match[1], { maxAliasCount: 10 });
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('not a mapping');
+  } catch {
+    data = lenientFrontmatter(match[1]);
+    if (Object.keys(data).length === 0) throw new MeetingError('Invalid YAML frontmatter.');
+  }
   return { data, text: text.slice(match[0].length).trim() };
 }
 export function seatNumber(value) {
@@ -137,7 +168,13 @@ export async function parseMeeting(root, id) {
   try { rosterFiles = await readdir(await inside(root, path.join(root, 'seats'))); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
   for (const file of rosterFiles.filter(file => file.endsWith('.md'))) {
-    const { data } = frontmatter(await read(root, path.join(root, 'seats', file)));
+    // The whole roster overlay is explicitly optional (a meeting is already complete
+    // and valid without it); one malformed dossier file must not fail every meeting
+    // in the listing. Skip just that file, same graceful-degradation spirit as
+    // listMeetings' own per-meeting try/catch.
+    let data;
+    try { ({ data } = frontmatter(await read(root, path.join(root, 'seats', file)))); }
+    catch { continue; }
     const seat = seats.find(seat => seat.seat === seatNumber(data.seat));
     if (seat) {
       if (typeof data.name === 'string') seat.name = data.name;
