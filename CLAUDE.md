@@ -66,3 +66,15 @@ Standard PR flow: branch → PR (using `.github/PULL_REQUEST_TEMPLATE.md`) → C
 merge. Log implementation rounds in `docs/dev-process.md` the same way SpoolSmith does —
 what was asked, what an adversarial review pass (astra) found, what got fixed, verified
 independently rather than trusted on the reviewer's word alone.
+
+**Once a change is verified and ready to ship, stand up the local instance for real,
+overriding whatever's already running.** Joey wants to iterate against a live localhost
+build without asking each time, per his own direction (2026-09-19). Concretely: kill any
+already-running backend/frontend background processes from a prior round, rebuild
+(`npm run build` where applicable), and restart both — backend on `:4000`, frontend on
+`:3000` — pointed at his real `corporate-strategy/board` data
+(`DATA_DIR=/var/home/jdspille/Documents/Github/spillers-technology/corporate-strategy/board`),
+the same way it's been run each round so far. This is a standing expectation for "ready
+to ship," not something to ask permission for each time — but still only after the
+change has actually been independently verified (lint/build/test re-run, not just
+trusted on the implementer's report), same bar as everything else in this file.
