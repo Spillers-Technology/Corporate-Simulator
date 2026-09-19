@@ -21,8 +21,26 @@
       <button id="stop" type="button" disabled>Stop</button>
     </form>
     <div class="status-row"><p id="status" role="status">Finding the meeting about the meeting…</p><span id="phase">Office idle</span></div>
-    <canvas id="office" width="1100" height="800" role="img" aria-label="Six-seat office replay. The full speech and vote record is available in the transcript below."></canvas>
-    <p class="flavor" id="flavor">Synergizing stakeholder alignment…</p>
+    <section class="timeline" aria-labelledby="timeline-heading">
+      <div class="timeline-head">
+        <h2 id="timeline-heading">Meeting timeline</h2>
+        <div class="skips">
+          <button id="next-speaker" type="button" disabled>Next speaker ▸</button>
+          <button id="next-phase" type="button" disabled>Next phase ▸▸</button>
+        </div>
+      </div>
+      <input id="scrubber" type="range" min="0" max="100" step="1" value="0" disabled
+        aria-label="Recording position. Drag to scrub, release to jump there.">
+      <div id="ticks" class="ticks"></div>
+      <p id="position" class="position" role="status">Select a recording to load its contents.</p>
+    </section>
+    <div class="stage">
+      <div class="stage-main">
+        <canvas id="office" width="1100" height="800" role="img" aria-label="Six-seat office replay. The full speech and vote record is available in the transcript below."></canvas>
+        <p class="flavor" id="flavor">Synergizing stakeholder alignment…</p>
+      </div>
+      <nav class="toc" id="toc" aria-label="Recording contents"><p class="muted">Contents appear once a recording is selected.</p></nav>
+    </div>
     <section class="transcript" aria-labelledby="transcript-heading">
       <h2 id="transcript-heading">Recording transcript</h2>
       <p class="muted">Original Markdown is shown as text. Vote colors: green = support, amber = conditional, red = oppose, gray = abstain. Unknown votes stay unmarked.</p>

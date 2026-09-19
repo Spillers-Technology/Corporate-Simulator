@@ -1,8 +1,11 @@
-export function initialState(seats = []) {
+export function initialState(seats = [], index = 0) {
   return { seats, phase: null, label: 'The meeting before the meeting', seat: null,
-    voice: 'narrator', text: '', positions: {}, votes: {}, status: 'idle' };
+    voice: 'narrator', text: '', positions: {}, votes: {}, status: 'idle', index };
 }
 export function applyEvent(state, event) {
+  // The server stamps every event with its index; tracking it is what lets the client
+  // say "resume from here" when the speed changes or a seek target is picked.
+  state = event.index === undefined ? state : { ...state, index: event.index };
   switch (event.type) {
     case 'phase': return { ...state, phase: event.phase, label: event.label, text: '', seat: null, voice: 'narrator' };
     case 'speech-start': return { ...state, seat: event.seat, voice: event.voice, text: '',
