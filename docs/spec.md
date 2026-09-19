@@ -1,6 +1,11 @@
 # Corporate-Simulator — Design Spec
 
-**Name:** Corporate-Simulator (`Spillers-Technology/Corporate-Simulator`, public).
+**Name:** Corporate-Simulator (`Spillers-Technology/Corporate-Simulator`, public) —
+**not final.** "Synergy Engine" is on the table too; Joey hasn't decided. Keep the repo
+name, package names, and code identifiers as `corporate-simulator` for now (renaming a
+GitHub repo/package after the fact is cheap; don't block on this), but don't hardcode
+the display name deep into UI copy in a way that's annoying to change later — pull it
+from one config constant.
 
 **One-line pitch:** A 2D animated office where a six-seat simulated board actually walks
 to their desks, argues in a meeting room, and votes — rendered live as a board-style
@@ -221,6 +226,53 @@ Nothing new to invent; parse what's already there:
 - **Founder-seat rendering:** Joey's own seat should look different from the simulated
   five — not a "director" sprite, something that reads as "the actual player," since
   `board/seats/01-founder.md` is explicit that seat isn't simulated.
+
+## 6a. Flavor & tone
+
+This is deliberately corporate-satire-flavored, not a neutral utility. Loading states,
+idle moments, and transitions are where the personality lives — think workplace-sitcom
+buzzword soup ("synergizing stakeholder alignment...", "circling back on
+actionables...", "leveraging cross-functional bandwidth...") rather than a generic
+spinner. Concretely:
+- **Loading/transition animations** get a rotating line of corporate-buzzword flavor
+  text, not a bare progress bar — e.g. while a seat's draft is streaming in, a small
+  "Renata is synergizing..." label alongside the speech bubble.
+- **Idle ambient banter** at desks between phases (a character occasionally emits a
+  throwaway buzzword-soup line via a small speech bubble, unrelated to the actual
+  motion) — cheap to write (a static flavor-text pool per character personality is
+  enough for v1), high delight-per-line-of-code.
+- Keep it affectionate workplace satire, not mean-spirited — the target is "we've all
+  sat through this meeting," not punching down at anyone real.
+
+## 6b. Persona avatars — South Park-style cutout animation
+
+**The animation technique itself:** yes, do this — a static head/face image composited
+onto a simple 2D-animated cutout body (limbs as separate flat pieces that rotate/tween
+around joints, à la South Park's construction-paper style) is cheap to build, easy to
+swap heads on, and reads as charming rather than uncanny at this art scale. Good fit for
+a canvas-based 2D renderer already committed to in §3.
+
+**The one real caution, worth stating plainly rather than skipping past:** if a seat's
+dossier is explicitly modeled on a named real person's published work (this repo's
+board process already has one such seat — Security/Seat 3 draws on a Troy-Hunt-inspired
+lens, and `board/RULES.md` §1 is explicit that "your name and career are invented" and
+"do not speak as a real human, claim their endorsement, or attribute invented quotes to
+them"). A text disclaimer carries that boundary today. **A photoreal face of an actual
+identifiable person, animated and voicing invented dialogue, is a meaningfully bigger
+step than a text disclaimer** — it visually reads as "this real person said this,"
+regardless of a caption underneath saying otherwise. Recommendation: keep every seat's
+avatar an invented or clearly-stylized/cartoonish face — never a real photo of a real
+identifiable person — even for a seat whose *lens* draws on someone real's published
+work. The founder seat (Joey's own, unsimulated) is the one place a real photo is
+actually fine, since that seat is explicitly him, not a character voicing invented
+opinions.
+
+## 6c. Text-to-speech
+
+Stretch goal, explicitly **not V1.** Note it here so it's not forgotten, not so it gets
+built early — the streamed-text speech bubble is the whole MVP experience; voice is a
+later layer once that's solid, and CC0-licensed TTS voices are their own sourcing
+question (same discipline as §8's sound sourcing) to solve later, not now.
 
 ## 7. Phasing (rough, not a commitment)
 
