@@ -1,0 +1,16 @@
+{
+  "name": "corporate-simulator-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "lint": "eslint .",
+    "build": "node --check src/parser.js && node --check src/replay.js && node --check src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": { "yaml": "^2.8.1" },
+  "devDependencies": { "eslint": "^9.39.0" }
+}
