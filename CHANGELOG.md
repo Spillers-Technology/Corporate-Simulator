@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-19
+
 ### Added
 - Live generation, slice 1a (`docs/spec.md` §13a): human-input forms for Phase 0 (the
   motion) and Phase 1 (the founder draft). A "New meeting" mode alongside replay, with
@@ -28,6 +30,15 @@ All notable changes to this project are documented here. Format loosely follows
 - The frontend proxy forwards `POST` to `/api/*` (static assets stay `GET`-only), and
   the page states plainly that a meeting sealed here stops at Phase 1 because live seat
   generation is not implemented in this build.
+
+### Known limitations
+- Two concurrent create-requests for the *same* meeting ID can race — the loser's
+  rollback can delete the winner's file before its commit lands. Fails safely (both
+  requests are rejected, the repository is left clean, nothing corrupts) but with a
+  confusing error. The UI's synchronous button-disable prevents a normal single click
+  from reaching this window; it needs two truly concurrent requests. See
+  `docs/dev-process.md`'s 2026-09-19 orchestrator-verification entry for how this was
+  reproduced and why it isn't fixed yet.
 
 ## [0.2.0] - 2026-09-19
 
