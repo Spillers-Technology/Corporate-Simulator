@@ -332,6 +332,12 @@ question (same discipline as §8's sound sourcing) to solve later, not now.
    makes it delightful. This is the part that's actually just "make it cute," and is
    the part Joey will have the most fun art-directing.
 
+**Standing practice for every one of these milestones, not a one-time step:** once a
+change is independently verified and ready to ship, stand up the local instance for
+real — see `CLAUDE.md`'s "Working in this repo" for the exact mechanics (kill the old
+one, rebuild, restart both services against real `corporate-strategy` data). Joey
+iterates against a live localhost build; that's the whole point of shipping fast here.
+
 ## 8. Sound
 
 Wanted, and it's going on YouTube — so **CC0 (public domain) only**, no CC-BY, no
