@@ -4,24 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Corporate-Simulator</title>
+<meta name="description" content="A tiny animated office where a fixed cast of simulated board members argues over your decisions. Self-hosted, open source, MIT.">
+<meta property="og:title" content="Corporate-Simulator">
+<meta property="og:description" content="Watch a board-style adversarial review play out in a 2D office: independent drafts, one debate, a vote, and your decision on the record.">
+<meta property="og:image" content="https://spillerstech.us/Corporate-Simulator/screenshots/debate.webp">
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #faf9f6;
-    --fg: #1a1a1a;
-    --muted: #6b6b6b;
+    --bg: #f6f5ef;
+    --fg: #17212a;
+    --muted: #5d6a72;
     --accent: #2f5d50;
+    --accent-ink: #ffffff;
     --card: #ffffff;
-    --border: #e4e1d8;
+    --border: #dfddd3;
+    --code: #ebe9e0;
+    --shot-border: #c9c7bc;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #14161a;
-      --fg: #ececec;
-      --muted: #9a9a9a;
-      --accent: #6fb6a3;
-      --card: #1c1f24;
-      --border: #2a2d33;
+      --bg: #111b24;
+      --fg: #e8e8de;
+      --muted: #a7b5bc;
+      --accent: #d9f097;
+      --accent-ink: #1b2a24;
+      --card: #1c2a34;
+      --border: #2c3c47;
+      --code: #16222c;
+      --shot-border: #384751;
     }
   }
   * { box-sizing: border-box; }
@@ -30,96 +40,232 @@
     background: var(--bg);
     color: var(--fg);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding-block: 4rem;
-    padding-inline: 1.25rem;
+    line-height: 1.55;
+    padding-inline: 1rem;
   }
-  main { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
-  .tagline { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-block: 1.5rem;
-  }
-  .status {
-    display: inline-block;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 0.2rem 0.7rem;
-    margin-bottom: 1rem;
-  }
+  main { max-width: 1040px; margin: 0 auto; padding-block: 3.5rem 2rem; }
   a { color: var(--accent); }
-  footer { color: var(--muted); font-size: 0.85rem; margin-top: 2rem; }
-  code { background: var(--border); padding: 0.1rem 0.35rem; border-radius: 4px; }
-  pre {
-    background: var(--border);
-    border-radius: 8px;
-    padding: 1rem;
-    overflow-x: auto;
-    font-size: 0.85rem;
-    line-height: 1.5;
+  img { display: block; max-width: 100%; height: auto; }
+
+  /* Hero */
+  .hero { text-align: center; max-width: 760px; margin: 0 auto; }
+  .eyebrow { font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.75rem; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3.4rem); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 1rem; }
+  .lede { font-size: clamp(1.05rem, 2.4vw, 1.25rem); color: var(--muted); margin: 0 auto 1.75rem; }
+  .ctas { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 700;
+    padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--accent);
   }
-  pre code { background: none; padding: 0; border-radius: 0; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.ghost { color: var(--accent); }
+  .status { margin-top: 1.25rem; font-size: 0.85rem; color: var(--muted); }
+  .status strong { color: var(--fg); }
+
+  .shot {
+    margin: 0;
+    border: 1px solid var(--shot-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.45);
+    background: #111b24;
+  }
+  figure.hero-shot { margin: 2.75rem 0 0; }
+  figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.6rem; text-align: center; }
+
+  /* Pitch strip */
+  .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-top: 3.5rem; }
+  .pillar { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .pillar h3 { margin: 0 0 0.4rem; font-size: 1.02rem; }
+  .pillar p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  /* Walkthrough */
+  section { margin-top: 4.5rem; }
+  h2 { font-size: clamp(1.5rem, 3.6vw, 2rem); letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+  .section-lede { color: var(--muted); margin: 0 0 2rem; max-width: 680px; }
+  .feature { display: grid; grid-template-columns: 1fr 1.35fr; gap: 2rem; align-items: center; margin-bottom: 3rem; }
+  .feature:nth-of-type(even) .copy { order: 2; }
+  .feature .step { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  .feature h3 { font-size: 1.3rem; margin: 0.3rem 0 0.6rem; }
+  .feature p { margin: 0 0 0.6rem; color: var(--muted); }
+  @media (max-width: 760px) {
+    .feature { grid-template-columns: 1fr; gap: 1rem; }
+    .feature:nth-of-type(even) .copy { order: 0; }
+  }
+
+  /* Honesty + quickstart */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+  .split h3 { margin-top: 0; }
+  .split ul { padding-left: 1.2rem; margin: 0; }
+  .split li { margin-bottom: 0.4rem; }
+  .tag { display: inline-block; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 0.15rem 0.6rem; margin-bottom: 0.75rem; border: 1px solid currentColor; }
+  .tag.live { color: var(--accent); }
+  .tag.next { color: var(--muted); }
+  code { background: var(--code); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+  pre { background: var(--code); border-radius: 8px; padding: 1rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; padding: 0; list-style: none; margin: 1rem 0 0; }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
 <main>
-  <span class="status">v0.3.0 — replay navigation + live-generation writes, self-hosted</span>
-  <h1>Corporate-Simulator</h1>
-  <p class="tagline">A tiny animated office where a fixed cast of simulated board members
-  argue over your decisions — for real.</p>
+  <header class="hero">
+    <p class="eyebrow">Open-source · self-hosted · MIT</p>
+    <h1>Put your next decision in front of a board that argues back.</h1>
+    <p class="lede">Corporate-Simulator is a tiny animated office for adversarial review. Write
+    a motion, seal your own position, and watch five simulated reviewers draft independently,
+    debate once, and vote — with every word saved as plain files you own.</p>
+    <div class="ctas">
+      <a class="btn primary" href="#try-it">Run it locally</a>
+      <a class="btn ghost" href="https://github.com/Spillers-Technology/Corporate-Simulator">View on GitHub</a>
+    </div>
+    <p class="status"><strong>v0.3.0</strong> — replay with navigation, plus writing new motions
+    and founder drafts. Live model generation is next.</p>
+  </header>
 
-  <div class="card">
-    <p>Corporate-Simulator runs and visualizes a board-style adversarial-review process:
-    isolated reviewers, each on a genuinely different model, draft independent positions
-    on a motion you write, debate once, vote, and hand you a decision record — rendered
-    as a 2D top-down office, streamed live as it's generated.</p>
-    <p>This page is a landing page, not the app itself — the app needs a live backend
-    (and, soon, real model dispatch) that static hosting can't run, so trying it means
-    running it, not clicking a button here yet. Ten-ish minutes, no Docker required:</p>
-    <pre><code># clone, then:
+  <figure class="hero-shot">
+    <div class="shot">
+      <img src="screenshots/debate.webp" width="1600" height="1166"
+           alt="The 2D office during the debate phase: six seats around a table, each labeled with its position — support, conditional, oppose, abstain — and the founder's speech in a bubble below.">
+    </div>
+    <figcaption>The debate phase of the bundled synthetic demo. Every seat's position is on the wall; the speaker's words stream in below.</figcaption>
+  </figure>
+
+  <div class="pillars">
+    <div class="pillar">
+      <h3>Isolation you can see</h3>
+      <p>Each reviewer's draft is its own record, written before anyone debates. The office shows that separation instead of blurring it into one transcript.</p>
+    </div>
+    <div class="pillar">
+      <h3>You go first, sealed</h3>
+      <p>Your own position is committed before the board speaks, so the simulation can't quietly anchor your judgment.</p>
+    </div>
+    <div class="pillar">
+      <h3>Plain files, real git</h3>
+      <p>Motions, drafts, votes and decisions are markdown in a folder you control. Sealing runs a real <code>git commit</code>.</p>
+    </div>
+    <div class="pillar">
+      <h3>Dissent is never summarized</h3>
+      <p>Votes and their reasons are kept in full, and the clerk's minutes are clearly labeled non-binding.</p>
+    </div>
+  </div>
+
+  <section aria-labelledby="how">
+    <h2 id="how">How a meeting runs</h2>
+    <p class="section-lede">The same process Spillers Technology uses by hand for real business
+    decisions, turned into something you can watch, scrub, and replay.</p>
+
+    <div class="feature">
+      <div class="copy">
+        <span class="step">Phase 0 · Motion</span>
+        <h3>Write the motion in your own words</h3>
+        <p>Decision, cost, deadline, and links to anything it depends on. A live preview shows
+        the exact markdown that will be written.</p>
+        <p>Nothing touches disk until you press <strong>Seal &amp; Commit</strong>. After that
+        the record is locked — you supersede it, you don't edit it.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/new-meeting.webp" width="1400" height="700" loading="lazy"
+             alt="The New meeting form: Title, Decision, Cost and Deadline fields filled in for a sample motion, with a 'Draft · nothing written yet' badge.">
+      </figure>
+    </div>
+
+    <div class="feature">
+      <div class="copy">
+        <span class="step">Phase 1–2 · Drafts</span>
+        <h3>Your position first, then five independent ones</h3>
+        <p>The founder — the one gold, human seat — commits a position before anything else
+        runs. Then each simulated seat lays out its own draft at its own desk.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/founder-draft.webp" width="1400" height="1020" loading="lazy"
+             alt="The office in Phase 1: the gold founder seat marked Support, five blue simulated seats at their desks, and the founder's summary, argument and cost in the speech panel.">
+      </figure>
+    </div>
+
+    <div class="feature">
+      <div class="copy">
+        <span class="step">Phase 3–4 · Debate &amp; vote</span>
+        <h3>One debate round, then a recorded vote</h3>
+        <p>All positions become visible to each other for a single round. Each seat then votes
+        with a reason — support, conditional, oppose, or abstain — and the tokens show up
+        right in the room.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/vote.webp" width="1400" height="1020" loading="lazy"
+             alt="The vote phase: colored vote tokens beside each seat and a table of seats, votes and reasons in the speech panel.">
+      </figure>
+    </div>
+
+    <div class="feature">
+      <div class="copy">
+        <span class="step">Replay</span>
+        <h3>Jump to any moment</h3>
+        <p>A table of contents covers every phase and every seat's draft. Drag the timeline to
+        seek, skip to the next speaker or phase, and change reading pace mid-playback.</p>
+        <p>Phase 6 is yours: the board advises, you decide — including overriding the vote, on
+        the record.</p>
+      </div>
+      <figure class="shot">
+        <img src="screenshots/app.webp" width="1600" height="938" loading="lazy"
+             alt="The full replay screen: recording picker, reading pace, a meeting timeline with phase tick marks, and a table of contents listing each phase and seat.">
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="status">
+    <h2 id="status">What's real today</h2>
+    <p class="section-lede">No faked features. If something isn't wired up, the app says so.</p>
+    <div class="split">
+      <div class="card">
+        <span class="tag live">Shipped in v0.3.0</span>
+        <ul>
+          <li>Replay any finished meeting folder: motion, sealed founder draft, independent drafts, debate, vote, clerk minutes, decision record</li>
+          <li>Animated six-seat office with progressive speech and vote gestures</li>
+          <li>Table of contents, drag-to-seek timeline, adjustable reading pace</li>
+          <li>Write and seal Phase 0 (motion) and Phase 1 (founder draft) with a real git commit</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag next">Not built yet</span>
+        <ul>
+          <li>Live seat generation — actually dispatching models to argue a new motion</li>
+          <li>Model-configuration console, with at least one seat locked to a different vendor</li>
+          <li>CLI sign-in, avatars, sound</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="try-it" id="try-it">
+    <h2>Run it locally</h2>
+    <p class="section-lede">This page is a landing page, not the app — the app needs a live
+    backend that static hosting can't run. About ten minutes with Node.js 22+, no Docker
+    required:</p>
+    <div class="card">
+      <pre><code># clone, then:
 npm --prefix backend ci &amp;&amp; DATA_DIR="$PWD/backend/test-fixtures" npm --prefix backend start
 # in a second terminal:
 npm --prefix frontend ci &amp;&amp; npm --prefix frontend run build
 BACKEND_URL=http://localhost:4000 npm --prefix frontend start
 # open http://localhost:3000</code></pre>
-    <p>Or point <code>DATA_DIR</code> at your own real board-style process directory
-    instead of the bundled synthetic fixture — see the README for the full shape.</p>
-    <ul>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator">Source on GitHub</a></li>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/releases/tag/v0.3.0">v0.3.0 release</a></li>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/docs/spec.md">Design spec</a></li>
-      <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Full self-hosting instructions</a></li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <p><strong>What's real today:</strong> read a finished board-style meeting (motion,
-    sealed founder position, isolated reviewer drafts, debate, vote, decision record) and
-    watch it play out — six seats, a distinctly-rendered human founder, progressive
-    speech, vote gestures, a separate non-binding clerk pass.</p>
-    <p>A table of contents (every phase, plus each independent reviewer's own draft)
-    lets you jump straight to any point instead of only watching start to finish; a
-    drag-to-seek timeline slider shows the same structure as tick marks; and the reading
-    speed is changeable mid-playback — pick a faster pace and that's fast-forward, no
-    separate control needed.</p>
-    <p>A locally-run instance can also write the two human-authored phases of a new
-    meeting — the motion and the founder draft — into its own data directory and commit
-    them for real, behind an explicit seal-and-commit step. Once sealed, a phase is
-    locked; nothing here silently rewrites institutional history.</p>
-    <p><strong>Not built yet:</strong> live seat generation (actually dispatching models
-    to argue a new motion), the model-configuration console, CLI sign-in, avatars,
-    sound. Watch the repo for those.</p>
-  </div>
+      <p>That plays the bundled, entirely fictional demo shown in the screenshots above. Point
+      <code>DATA_DIR</code> at your own board-style process directory to replay your own
+      meetings — your data stays on your machine.</p>
+      <ul class="links">
+        <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator">Source on GitHub</a></li>
+        <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/releases/tag/v0.3.0">v0.3.0 release</a></li>
+        <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/README.md">Self-hosting guide</a></li>
+        <li><a href="https://github.com/Spillers-Technology/Corporate-Simulator/blob/main/docs/spec.md">Design spec</a></li>
+      </ul>
+    </div>
+  </section>
 
   <footer>
     MIT licensed. A <a href="https://github.com/Spillers-Technology">Spillers Technology</a> project.
+    Screenshots show the synthetic demo fixture; no real company or decision is represented.
   </footer>
 </main>
 </body>
