@@ -4,6 +4,26 @@ Per-round implementation log: what was asked, what an adversarial review pass fo
 what got fixed, how it was independently verified. Same convention as SpoolSmith's
 `docs/dev-process.md` — see `CONTRIBUTING.md` for the practice this file records.
 
+## 2026-10-08 — Landing page: screenshots and a more product-forward pitch
+
+Asked by Joey: put screenshots on the Pages site and make it slightly more product
+forward. Done by Claude (Opus 5.5); no astra pass this round (copy/CSS only).
+
+- `site/index.html` rewritten around a hero (pitch, two CTAs, status line), four value
+  pillars, a phase-by-phase walkthrough with screenshots, the same honest "shipped /
+  not built yet" split as before, and the unchanged quickstart.
+- `site/screenshots/*.webp` (five images, ~180 KB total) captured with Playwright from a
+  local instance on side ports (backend `:4100`, frontend `:3100`) pointed at
+  `backend/test-fixtures` — the synthetic fixture only, never `corporate-strategy`. The
+  New-meeting shot was filled in but never sealed, so nothing was written.
+- Capturing that shot exposed a frontend CSS bug: `.stack :read-only:not(select)`
+  matches every non-editable element (labels, headings, the preview `pre`), drawing
+  dashed borders across the whole New-meeting form. Scoped to
+  `.stack :is(input, textarea):read-only`; sealed fields still render dashed.
+
+Verified: frontend lint, build and tests re-run (7/7 pass); the page rendered at
+1280 px light/dark and 390 px dark with no horizontal scroll and no broken images.
+
 ## 2026-09-19 — Live generation slice 1a: Phase 0/1 human-input forms and the first writes
 
 Requested per `docs/spec.md` §13a — **13a only**; §13b (a single live seat) and §13c

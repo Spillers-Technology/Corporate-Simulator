@@ -35,7 +35,8 @@ form.stack { display: block; margin-top: 22px; }
 .stack input, .stack textarea, .stack select { font: inherit; font-size: 14px; width: 100%;
   background: #111b24; color: #e8e8de; border: 1px solid #536370; border-radius: 5px; padding: 10px 12px; }
 .stack textarea { resize: vertical; line-height: 1.6; }
-.stack :read-only:not(select), .stack.sealed select { background: #16222c; color: #bfd0d6; border-style: dashed; }
+/* Scope to form controls: bare :read-only also matches every non-editable element. */
+.stack :is(input, textarea):read-only, .stack.sealed select { background: #16222c; color: #bfd0d6; border-style: dashed; }
 .stack.sealed .badge { border-color: #d9f097; color: #d9f097; }
 .preview { margin-top: 20px; background: #16222c; border: 1px solid #3c505c; border-radius: 8px; padding: 4px 16px 12px; }
 .preview h3 { letter-spacing: 1px; text-transform: uppercase; font-size: 12px; color: #a2c6bb; }

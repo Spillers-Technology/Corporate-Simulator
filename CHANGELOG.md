@@ -5,6 +5,14 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- Landing page (`site/`) is more product-forward and now shows screenshots of the
+  synthetic demo.
+
+### Fixed
+- New-meeting form: non-editable elements no longer pick up the read-only dashed
+  border; only read-only inputs and textareas do.
+
 ## [0.3.0] - 2026-09-19
 
 ### Added
